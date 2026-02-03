@@ -4,6 +4,7 @@ import './globals.css';
 import { cn } from '@/lib/utils';
 import { ThemeProvider } from '@/components/theme-provider';
 import { PushNotificationsProvider } from '@/components/notifications/push-notifications-provider';
+import { HabitsProvider } from '@/hooks/use-habits';
 
 export const metadata: Metadata = {
   title: 'Umbral',
@@ -28,7 +29,9 @@ export default function RootLayout({
       <body className={cn("font-body antialiased")}>
         <ThemeProvider defaultTheme='zen'>
           <PushNotificationsProvider>
-            {children}
+            <HabitsProvider>
+              {children}
+            </HabitsProvider>
           </PushNotificationsProvider>
           <Toaster />
         </ThemeProvider>
