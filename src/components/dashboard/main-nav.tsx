@@ -19,7 +19,6 @@ const navItems = [
 
 const bottomNavItems = [
     { href: "/dashboard/settings", label: "Ajustes", icon: Settings },
-    { href: "/dashboard/pro", label: "Hazte Pro", icon: Rocket },
 ]
 
 export function MainNav() {

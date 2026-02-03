@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: 'Umbral',
   webDir: 'out',
   server: {
-    url: 'YOUR_VERCEL_URL_HERE', // You will replace this later
+    url: 'https://umbrales-five.vercel.app/', // You will replace this later
     cleartext: true,
   },
 };

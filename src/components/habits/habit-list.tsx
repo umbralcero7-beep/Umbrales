@@ -1,13 +1,11 @@
 "use client";
 
 import { useState } from 'react';
-import { habits as initialHabits, type Habit } from '@/lib/data';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Button } from '../ui/button';
 import { ListChecks, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useToast } from '@/hooks/use-toast';
 import {
     Dialog,
     DialogContent,
@@ -18,51 +16,20 @@ import {
     DialogTrigger,
   } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { useHabits } from '@/hooks/use-habits';
 
 export function HabitList() {
-  const [habits, setHabits] = useState<Habit[]>(initialHabits);
+  const { habits, toggleHabit, addHabit } = useHabits();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newHabitName, setNewHabitName] = useState("");
-  const { toast } = useToast();
-
-  const toggleHabit = (id: string) => {
-    setHabits(
-      habits.map((habit) =>
-        habit.id === id ? { ...habit, completed: !habit.completed } : habit
-      )
-    );
-    const habit = habits.find(h => h.id === id);
-    if (habit && !habit.completed) {
-      toast({
-        title: "¡Hábito completado!",
-        description: `¡Buen trabajo en "${habit.name}"!`,
-      });
-    }
-  };
 
   const handleSaveHabit = () => {
-    if (newHabitName.trim() === "") {
-        toast({
-            variant: "destructive",
-            title: "El nombre no puede estar vacío",
-            description: "Por favor, escribe un nombre para tu hábito.",
-        });
-        return;
+    addHabit(newHabitName);
+    // The context handles logic, but we can close the dialog if successful
+    if (newHabitName.trim() !== "") {
+        setNewHabitName("");
+        setIsDialogOpen(false);
     }
-
-    const newHabit: Habit = {
-        id: `habit-${Date.now()}`,
-        name: newHabitName.trim(),
-        completed: false,
-    };
-
-    setHabits((prevHabits) => [...prevHabits, newHabit]);
-    setNewHabitName("");
-    setIsDialogOpen(false);
-    toast({
-        title: "¡Hábito Añadido!",
-        description: `Has añadido "${newHabit.name}" a tu lista.`,
-    });
   };
   
   const handleDialogChange = (open: boolean) => {

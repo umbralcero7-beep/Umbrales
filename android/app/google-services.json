@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "966185917348",
+    "project_id": "umbral-201dd",
+    "storage_bucket": "umbral-201dd.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:966185917348:android:cc19040a91860854273f31",
+        "android_client_info": {
+          "package_name": "com.umbral.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "966185917348-4lvhhf2gek05qrr9en6c2jm9fub75jqp.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAXOD05I6tz2gPfijSoRaBIEP1ZJASGBO4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "966185917348-4lvhhf2gek05qrr9en6c2jm9fub75jqp.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

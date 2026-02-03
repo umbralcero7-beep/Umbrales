@@ -3,6 +3,7 @@ import { Toaster } from "@/components/ui/toaster"
 import './globals.css';
 import { cn } from '@/lib/utils';
 import { ThemeProvider } from '@/components/theme-provider';
+import { PushNotificationsProvider } from '@/components/notifications/push-notifications-provider';
 
 export const metadata: Metadata = {
   title: 'Umbral',
@@ -17,6 +18,7 @@ export default function RootLayout({
   return (
     <html lang="es" suppressHydrationWarning>
       <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#4B8B6D" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -25,7 +27,9 @@ export default function RootLayout({
       </head>
       <body className={cn("font-body antialiased")}>
         <ThemeProvider defaultTheme='zen'>
-          {children}
+          <PushNotificationsProvider>
+            {children}
+          </PushNotificationsProvider>
           <Toaster />
         </ThemeProvider>
       </body>

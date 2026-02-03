@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -34,6 +34,7 @@ const formSchema = z.object({
 export function JournalForm() {
   const [analysis, setAnalysis] = useState<AnalyzeJournalEntryOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [userName, setUserName] = useState('');
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -41,11 +42,21 @@ export function JournalForm() {
     defaultValues: { entry: "" },
   });
 
+  useEffect(() => {
+    const name = localStorage.getItem('userName');
+    if (name) {
+      setUserName(name);
+    }
+  }, []);
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     setAnalysis(null);
     try {
-      const result = await analyzeJournalEntry({ entryText: values.entry });
+      const result = await analyzeJournalEntry({ 
+        entryText: values.entry,
+        userName: userName || 'tú'
+      });
       setAnalysis(result);
       toast({
         title: "Análisis Completo",

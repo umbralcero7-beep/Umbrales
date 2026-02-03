@@ -6,16 +6,17 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Award, Brain, Heart, Smile, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useHabits } from '@/hooks/use-habits';
 
 type OnboardingQuizProps = {
   userName: string;
 };
 
 const purposeOptions = [
-    { key: 'Salud', label: 'Salud', icon: Heart, suggestion: 'Una caminata de 15 minutos al día puede cambiar tu energía. ¿Qué tal si empezamos con eso?' },
-    { key: 'Creatividad', label: 'Creatividad', icon: Brain, suggestion: '¿Qué tal dedicar 10 minutos a escribir o dibujar libremente? Un pequeño espacio para tus ideas.' },
-    { key: 'Productividad', label: 'Productividad', icon: Zap, suggestion: 'Planificar tus 3 tareas más importantes del día puede darte claridad. ¿Lo intentamos?' },
-    { key: 'Bienestar emocional', label: 'Bienestar emocional', icon: Smile, suggestion: 'Un hábito pequeño puede abrir grandes puertas. ¿Qué tal empezar con 5 minutos de respiración consciente?' },
+    { key: 'Salud', label: 'Salud', icon: Heart, suggestion: 'Una caminata de 15 minutos al día puede cambiar tu energía. ¿Qué tal si empezamos con eso?', habitName: 'Caminata diaria de 15 minutos' },
+    { key: 'Creatividad', label: 'Creatividad', icon: Brain, suggestion: '¿Qué tal dedicar 10 minutos a escribir o dibujar libremente? Un pequeño espacio para tus ideas.', habitName: '10 minutos de escritura/dibujo libre' },
+    { key: 'Productividad', label: 'Productividad', icon: Zap, suggestion: 'Planificar tus 3 tareas más importantes del día puede darte claridad. ¿Lo intentamos?', habitName: 'Planificar mis 3 tareas importantes' },
+    { key: 'Bienestar emocional', label: 'Bienestar emocional', icon: Smile, suggestion: 'Un hábito pequeño puede abrir grandes puertas. ¿Qué tal empezar con 5 minutos de respiración consciente?', habitName: '5 minutos de respiración consciente' },
 ];
 
 const CeroIcon = ({ className }: { className?: string }) => (
@@ -64,10 +65,18 @@ const CeroIcon = ({ className }: { className?: string }) => (
 export function OnboardingQuiz({ userName }: OnboardingQuizProps) {
   const [step, setStep] = useState(0);
   const [selectedPurpose, setSelectedPurpose] = useState<(typeof purposeOptions)[0] | null>(null);
+  const { addHabit } = useHabits();
 
   const handlePurposeSelect = (purpose: (typeof purposeOptions)[0]) => {
     setSelectedPurpose(purpose);
     setStep(2);
+  };
+
+  const handleAcceptHabit = () => {
+    if (selectedPurpose) {
+      addHabit(selectedPurpose.habitName);
+    }
+    setStep(3);
   };
   
   if (step === 0) {
@@ -116,7 +125,7 @@ export function OnboardingQuiz({ userName }: OnboardingQuizProps) {
                 </CardDescription>
             </CardHeader>
             <CardContent>
-                 <Button onClick={() => setStep(3)}>Aceptar Hábito</Button>
+                 <Button onClick={handleAcceptHabit}>Aceptar Hábito</Button>
             </CardContent>
         </Card>
     );

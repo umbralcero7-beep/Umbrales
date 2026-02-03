@@ -10,6 +10,7 @@ import { MainNav } from "@/components/dashboard/main-nav";
 import { UserNav } from "@/components/dashboard/user-nav";
 import { MobileNav } from "@/components/dashboard/mobile-nav";
 import { cn } from "@/lib/utils";
+import { HabitsProvider } from "@/hooks/use-habits";
 
 const Logo = ({ className }: { className?: string }) => (
   <svg
@@ -44,31 +45,33 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <SidebarProvider>
-        <Sidebar collapsible="icon" side="left" className="hidden md:flex">
-          <SidebarHeader className="border-b">
-            <Link href="/dashboard" className="flex items-center gap-2 font-bold text-lg font-headline tracking-tighter">
-              <Logo className="h-6 w-6" />
-              <span className="group-data-[collapsible=icon]:hidden">Umbral</span>
-            </Link>
-          </SidebarHeader>
-          <SidebarContent className="p-2">
-            <MainNav />
-          </SidebarContent>
-          <SidebarFooter className="p-2">
-            <UserNav isSidebar={true} />
-          </SidebarFooter>
-        </Sidebar>
+    <HabitsProvider>
+      <SidebarProvider>
+          <Sidebar collapsible="icon" side="left" className="hidden md:flex">
+            <SidebarHeader className="border-b">
+              <Link href="/dashboard" className="flex items-center gap-2 font-bold text-lg font-headline tracking-tighter">
+                <Logo className="h-6 w-6" />
+                <span className="group-data-[collapsible=icon]:hidden">Umbral</span>
+              </Link>
+            </SidebarHeader>
+            <SidebarContent className="p-2">
+              <MainNav />
+            </SidebarContent>
+            <SidebarFooter className="p-2">
+              <UserNav isSidebar={true} />
+            </SidebarFooter>
+          </Sidebar>
 
-        <main className="flex-1 pb-24 md:pb-0">
-          <div className="p-4 md:p-6 lg:p-8 h-full">
-            {children}
-          </div>
-        </main>
+          <main className="flex-1 pb-24 md:pb-0">
+            <div className="p-4 md:p-6 lg:p-8">
+              {children}
+            </div>
+          </main>
 
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 h-20 border-t bg-background/95 backdrop-blur-sm">
-            <MobileNav />
-        </nav>
-    </SidebarProvider>
+          <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 h-20 border-t bg-background/95 backdrop-blur-sm">
+              <MobileNav />
+          </nav>
+      </SidebarProvider>
+    </HabitsProvider>
   );
 }

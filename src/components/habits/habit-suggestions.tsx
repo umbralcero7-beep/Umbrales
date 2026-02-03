@@ -10,7 +10,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { useToast } from "@/hooks/use-toast";
+import { useHabits } from "@/hooks/use-habits";
 import { Lightbulb, Plus } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
@@ -44,14 +44,10 @@ const suggestedHabitsByCategory = [
 
 export function HabitSuggestions() {
   const [open, setOpen] = useState(false);
-  const { toast } = useToast();
+  const { addHabit } = useHabits();
 
   const handleAddHabit = (habitName: string) => {
-    toast({
-        title: "¡Hábito Añadido!",
-        description: `"${habitName}" ha sido añadido a tu lista.`,
-    })
-    // In a real app, you'd also update the global state or call an API here
+    addHabit(habitName);
   }
 
   return (

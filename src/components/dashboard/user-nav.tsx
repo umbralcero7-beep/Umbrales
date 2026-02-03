@@ -65,7 +65,6 @@ export function UserNav({ isSidebar = false, side = "bottom", align = "end" }: U
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
             <DropdownMenuItem asChild><Link href="/dashboard/settings">Ajustes</Link></DropdownMenuItem>
-            <DropdownMenuItem asChild><Link href="/dashboard/pro">Subir de plan</Link></DropdownMenuItem>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DropdownMenuItem asChild><Link href="/">Cerrar Sesión</Link></DropdownMenuItem>
@@ -93,7 +92,6 @@ export function UserNav({ isSidebar = false, side = "bottom", align = "end" }: U
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
             <DropdownMenuItem asChild><Link href="/dashboard/settings">Ajustes</Link></DropdownMenuItem>
-            <DropdownMenuItem asChild><Link href="/dashboard/pro">Subir de plan</Link></DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild><Link href="/">Cerrar Sesión</Link></DropdownMenuItem>
