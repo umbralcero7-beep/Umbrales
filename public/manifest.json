@@ -1,0 +1,37 @@
+{
+  "name": "Umbral",
+  "short_name": "Umbral",
+  "description": "Un santuario para el bienestar mental y el crecimiento personal.",
+  "theme_color": "#483d73",
+  "background_color": "#F0F4F8",
+  "display": "standalone",
+  "scope": "/",
+  "start_url": "/",
+  "lang": "es",
+  "icons": [
+    {
+      "src": "/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "https://picsum.photos/seed/umbral-192/192/192",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any"
+    },
+    {
+      "src": "https://picsum.photos/seed/umbral-512/512/512",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any"
+    },
+    {
+      "src": "https://picsum.photos/seed/umbral-maskable-512/512/512",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
+    }
+  ]
+}
