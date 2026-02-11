@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { OnboardingQuiz } from '@/components/onboarding/onboarding-quiz';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
+import { useUser } from '@/hooks/use-user';
 
 const registerSchema = z.object({
   name: z.string().min(2, { message: 'Tu nombre debe tener al menos 2 caracteres.' }),
@@ -48,6 +49,7 @@ const Logo = ({ className }: { className?: string }) => (
 export default function RegisterPage() {
   const [step, setStep] = useState(1);
   const [userName, setUserName] = useState('');
+  const { login } = useUser();
 
   const registerForm = useForm<z.infer<typeof registerSchema>>({
     resolver: zodResolver(registerSchema),
@@ -57,8 +59,12 @@ export default function RegisterPage() {
   function onRegisterSubmit(values: z.infer<typeof registerSchema>) {
     setUserName(values.name);
     if (typeof window !== 'undefined') {
-      localStorage.setItem('userName', values.name);
+      // Store name with user-specific key
+      const userKey = `userName_${values.email}`;
+      localStorage.setItem(userKey, values.name);
     }
+    // "Log in" the user with the simple session manager
+    login(values.email);
     setStep(2);
   }
 

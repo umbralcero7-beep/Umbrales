@@ -6,6 +6,7 @@ import { ThemeProvider } from '@/components/theme-provider';
 import { PushNotificationsProvider } from '@/components/notifications/push-notifications-provider';
 import { HabitsProvider } from '@/hooks/use-habits';
 import { JournalProvider } from '@/hooks/use-journal';
+import { UserProvider } from '@/hooks/use-user';
 
 export const metadata: Metadata = {
   title: 'Umbral',
@@ -29,14 +30,16 @@ export default function RootLayout({
       </head>
       <body className={cn("font-body antialiased")}>
         <ThemeProvider defaultTheme='zen'>
-          <PushNotificationsProvider>
-            <HabitsProvider>
-              <JournalProvider>
-                {children}
-              </JournalProvider>
-            </HabitsProvider>
-          </PushNotificationsProvider>
-          <Toaster />
+          <UserProvider>
+            <PushNotificationsProvider>
+              <HabitsProvider>
+                <JournalProvider>
+                  {children}
+                </JournalProvider>
+              </HabitsProvider>
+            </PushNotificationsProvider>
+            <Toaster />
+          </UserProvider>
         </ThemeProvider>
       </body>
     </html>

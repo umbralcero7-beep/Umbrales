@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Award, Brain, Heart, Smile, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useHabits } from '@/hooks/use-habits';
+import { useRouter } from 'next/navigation';
 
 type OnboardingQuizProps = {
   userName: string;
@@ -66,6 +67,7 @@ export function OnboardingQuiz({ userName }: OnboardingQuizProps) {
   const [step, setStep] = useState(0);
   const [selectedPurpose, setSelectedPurpose] = useState<(typeof purposeOptions)[0] | null>(null);
   const { addHabit } = useHabits();
+  const router = useRouter();
 
   const handlePurposeSelect = (purpose: (typeof purposeOptions)[0]) => {
     setSelectedPurpose(purpose);
@@ -78,6 +80,10 @@ export function OnboardingQuiz({ userName }: OnboardingQuizProps) {
     }
     setStep(3);
   };
+
+  const finishOnboarding = () => {
+    router.push('/dashboard');
+  }
   
   if (step === 0) {
     return (
@@ -142,8 +148,8 @@ export function OnboardingQuiz({ userName }: OnboardingQuizProps) {
                 <CardDescription>Cada hábito es un umbral hacia tu mejor versión.</CardDescription>
             </CardHeader>
             <CardContent>
-                <Button asChild>
-                    <Link href="/dashboard">Ir a mi panel</Link>
+                <Button onClick={finishOnboarding}>
+                    Ir a mi panel
                 </Button>
             </CardContent>
         </Card>

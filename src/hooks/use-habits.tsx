@@ -5,6 +5,7 @@ import { habits as initialHabitsData, type Habit as HabitWithCompletion } from '
 import { useToast } from '@/hooks/use-toast';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { Capacitor } from '@capacitor/core';
+import { useUser } from './use-user';
 
 // Base habit definition, stored without completion status
 export type Habit = Omit<HabitWithCompletion, 'completed'>;
@@ -26,12 +27,12 @@ interface HabitsContextType {
 
 const HabitsContext = createContext<HabitsContextType | undefined>(undefined);
 
-// Use a new key to avoid conflicts with old data structure
-const HABITS_STORAGE_KEY = 'umbral_habits_v2'; 
+const getStorageKey = (userEmail: string) => `umbral_habits_v2_${userEmail}`;
 const getTodayDateString = () => new Date().toISOString().split('T')[0];
 
 export function HabitsProvider({ children }: { children: React.ReactNode }) {
   const { toast } = useToast();
+  const { userEmail } = useUser();
   
   // State for base habit configurations (id, name, reminder)
   const [baseHabits, setBaseHabits] = useState<Habit[]>([]);
@@ -57,41 +58,47 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
     }
   }, [toast]);
 
-  // Load data from localStorage on mount
+  // Load data from localStorage on user change
   useEffect(() => {
-    try {
-      const storedJson = localStorage.getItem(HABITS_STORAGE_KEY);
-      if (storedJson) {
-        const { habits, history: storedHistory } = JSON.parse(storedJson);
-        setBaseHabits(habits || []);
-        setHistory(storedHistory || {});
-      } else {
-        // Set initial data if no modern storage found
+    if (userEmail) {
+      try {
+        const storageKey = getStorageKey(userEmail);
+        const storedJson = localStorage.getItem(storageKey);
+        if (storedJson) {
+          const { habits, history: storedHistory } = JSON.parse(storedJson);
+          setBaseHabits(habits || []);
+          setHistory(storedHistory || {});
+        } else {
+          // Set initial data for a new user
+          const cleanInitialHabits = initialHabitsData.map(({ completed, ...rest }) => rest);
+          setBaseHabits(cleanInitialHabits);
+          setHistory({});
+        }
+      } catch (error) {
+        console.error("Error reading habits from localStorage", error);
         const cleanInitialHabits = initialHabitsData.map(({ completed, ...rest }) => rest);
         setBaseHabits(cleanInitialHabits);
+        setHistory({});
       }
-    } catch (error) {
-      console.error("Error reading habits from localStorage", error);
-      const cleanInitialHabits = initialHabitsData.map(({ completed, ...rest }) => rest);
-      setBaseHabits(cleanInitialHabits);
+    } else {
+        // Clear data if user logs out
+        setBaseHabits([]);
+        setHistory({});
     }
-  }, []);
+  }, [userEmail]);
 
   // Persist data to localStorage whenever it changes
   useEffect(() => {
-    // Avoid saving if state is empty before hydration is complete
-    if (baseHabits.length === 0 && Object.keys(history).length === 0) {
-      if (localStorage.getItem(HABITS_STORAGE_KEY) === null) {
-        return;
-      }
+    if (userEmail) {
+        try {
+            const storageKey = getStorageKey(userEmail);
+            const dataToStore = { habits: baseHabits, history };
+            localStorage.setItem(storageKey, JSON.stringify(dataToStore));
+        } catch (error) {
+            console.error("Error saving habits to localStorage", error);
+        }
     }
-    try {
-      const dataToStore = { habits: baseHabits, history };
-      localStorage.setItem(HABITS_STORAGE_KEY, JSON.stringify(dataToStore));
-    } catch (error) {
-      console.error("Error saving habits to localStorage", error);
-    }
-  }, [baseHabits, history]);
+  }, [baseHabits, history, userEmail]);
 
   const addHabit = (habitName: string) => {
     if (habitName.trim() === "") {

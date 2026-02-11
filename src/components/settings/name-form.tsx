@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
+import { useUser } from '@/hooks/use-user';
 
 const nameSchema = z.object({
   name: z.string().min(2, { message: 'Tu nombre debe tener al menos 2 caracteres.' }),
@@ -15,26 +16,34 @@ const nameSchema = z.object({
 
 export function NameForm() {
   const { toast } = useToast();
+  const { userEmail } = useUser();
+  
   const form = useForm<z.infer<typeof nameSchema>>({
     resolver: zodResolver(nameSchema),
     defaultValues: { name: '' },
   });
 
   useEffect(() => {
-    const storedName = localStorage.getItem('userName');
-    if (storedName) {
-      form.setValue('name', storedName);
+    if (userEmail) {
+        const userKey = `userName_${userEmail}`;
+        const storedName = localStorage.getItem(userKey);
+        if (storedName) {
+            form.setValue('name', storedName);
+        }
     }
-  }, [form]);
+  }, [form, userEmail]);
 
   function onSubmit(values: z.infer<typeof nameSchema>) {
-    localStorage.setItem('userName', values.name);
-    // Dispatch a custom event to notify other components like UserNav
-    window.dispatchEvent(new Event('storage'));
-    toast({
-      title: 'Nombre Actualizado',
-      description: 'Tu nombre ha sido cambiado exitosamente.',
-    });
+    if (userEmail) {
+        const userKey = `userName_${userEmail}`;
+        localStorage.setItem(userKey, values.name);
+        // Dispatch a custom event to notify other components like UserNav
+        window.dispatchEvent(new StorageEvent('storage', { key: userKey }));
+        toast({
+          title: 'Nombre Actualizado',
+          description: 'Tu nombre ha sido cambiado exitosamente.',
+        });
+    }
   }
 
   return (
@@ -53,7 +62,7 @@ export function NameForm() {
             </FormItem>
           )}
         />
-        <Button type="submit">Guardar Nombre</Button>
+        <Button type="submit" disabled={!userEmail}>Guardar Nombre</Button>
       </form>
     </Form>
   );

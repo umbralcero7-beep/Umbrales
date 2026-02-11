@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { JournalEntry } from '@/lib/data';
 import type { AnalyzeJournalEntryOutput } from '@/ai/flows/analyze-journal-entry';
 import { useToast } from '@/hooks/use-toast';
+import { useUser } from './use-user';
 
 interface JournalContextType {
   entries: JournalEntry[];
@@ -12,34 +13,42 @@ interface JournalContextType {
 
 const JournalContext = createContext<JournalContextType | undefined>(undefined);
 
-const JOURNAL_STORAGE_KEY = 'umbral_journal_entries';
+const getStorageKey = (userEmail: string) => `umbral_journal_entries_${userEmail}`;
 
 export function JournalProvider({ children }: { children: React.ReactNode }) {
   const { toast } = useToast();
+  const { userEmail } = useUser();
   const [entries, setEntries] = useState<JournalEntry[]>([]);
 
   useEffect(() => {
-    try {
-      const storedJson = localStorage.getItem(JOURNAL_STORAGE_KEY);
-      if (storedJson) {
-        setEntries(JSON.parse(storedJson));
-      }
-    } catch (error) {
-      console.error("Error reading journal entries from localStorage", error);
-      setEntries([]);
+    if (userEmail) {
+        try {
+            const storageKey = getStorageKey(userEmail);
+            const storedJson = localStorage.getItem(storageKey);
+            if (storedJson) {
+                setEntries(JSON.parse(storedJson));
+            } else {
+                setEntries([]);
+            }
+        } catch (error) {
+            console.error("Error reading journal entries from localStorage", error);
+            setEntries([]);
+        }
+    } else {
+        setEntries([]);
     }
-  }, []);
+  }, [userEmail]);
 
   useEffect(() => {
-    if (entries.length === 0 && localStorage.getItem(JOURNAL_STORAGE_KEY) === null) {
-      return;
+    if (userEmail) {
+        try {
+            const storageKey = getStorageKey(userEmail);
+            localStorage.setItem(storageKey, JSON.stringify(entries));
+        } catch (error) {
+            console.error("Error saving journal entries to localStorage", error);
+        }
     }
-    try {
-      localStorage.setItem(JOURNAL_STORAGE_KEY, JSON.stringify(entries));
-    } catch (error) {
-      console.error("Error saving journal entries to localStorage", error);
-    }
-  }, [entries]);
+  }, [entries, userEmail]);
 
   const addJournalEntry = (content: string, analysis: AnalyzeJournalEntryOutput) => {
     const newEntry: JournalEntry = {

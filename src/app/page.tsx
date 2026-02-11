@@ -1,3 +1,5 @@
+'use client';
+
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -5,6 +7,15 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import Image from "next/image"
 import { cn } from "@/lib/utils"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import * as z from "zod"
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
+import { useUser } from "@/hooks/use-user"
+import { useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Loader2 } from "lucide-react";
 
 const Logo = ({ className }: { className?: string }) => (
     <svg
@@ -32,7 +43,41 @@ const Logo = ({ className }: { className?: string }) => (
     </svg>
   );
 
+  const loginSchema = z.object({
+    email: z.string().email({ message: "Por favor, introduce un correo electrónico válido." }),
+    password: z.string().min(1, { message: "Por favor, introduce tu contraseña." }),
+    remember: z.boolean().default(false),
+  });
+
 export default function LoginPage() {
+    const { login, userEmail, isLoading } = useUser();
+    const router = useRouter();
+
+    const form = useForm<z.infer<typeof loginSchema>>({
+        resolver: zodResolver(loginSchema),
+        defaultValues: { email: "", password: "", remember: true },
+    });
+
+    useEffect(() => {
+        if (userEmail && !isLoading) {
+            router.push('/dashboard');
+        }
+    }, [userEmail, isLoading, router]);
+
+    function onSubmit(values: z.infer<typeof loginSchema>) {
+        // NOTE: Password is not validated as we don't have a backend yet.
+        // This is a temporary auth fix for user data isolation.
+        login(values.email);
+    }
+    
+    if (isLoading || userEmail) {
+        return (
+            <div className="flex h-screen items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin" />
+            </div>
+        );
+    }
+
   return (
     <div className="w-full lg:grid lg:min-h-screen lg:grid-cols-2 xl:min-h-screen">
       <div className="flex items-center justify-center py-12">
@@ -50,37 +95,63 @@ export default function LoginPage() {
             <CardHeader>
                 <CardTitle className="text-2xl font-headline">Bienvenido a Umbral</CardTitle>
                 <CardDescription>
-                Inicia sesión o crea una cuenta para comenzar tu viaje.
+                Inicia sesión para continuar tu viaje.
                 </CardDescription>
             </CardHeader>
-            <CardContent className="grid gap-4">
-                <div className="grid gap-2">
-                    <Label htmlFor="email">Correo Electrónico</Label>
-                    <Input
-                    id="email"
-                    type="email"
-                    placeholder="m@example.com"
-                    required
-                    />
-                </div>
-                <div className="grid gap-2">
-                    <div className="flex items-center">
-                    <Label htmlFor="password">Contraseña</Label>
-                    <Link
-                        href="#"
-                        className="ml-auto inline-block text-sm underline"
-                    >
-                        ¿Olvidaste tu contraseña?
-                    </Link>
-                    </div>
-                    <Input id="password" type="password" required />
-                </div>
-                <Button className="w-full" asChild>
-                    <Link href="/dashboard">Iniciar Sesión</Link>
-                </Button>
-                <Button variant="outline" className="w-full" asChild>
-                    <Link href="/register">Crear una cuenta</Link>
-                </Button>
+            <CardContent>
+                <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4">
+                        <FormField control={form.control} name="email" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Correo Electrónico</FormLabel>
+                                <FormControl>
+                                    <Input type="email" placeholder="tu@correo.com" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}/>
+                        <FormField control={form.control} name="password" render={({ field }) => (
+                            <FormItem>
+                                <div className="flex items-center">
+                                    <FormLabel>Contraseña</FormLabel>
+                                    <Link href="#" className="ml-auto inline-block text-sm underline">
+                                        ¿Olvidaste tu contraseña?
+                                    </Link>
+                                </div>
+                                <FormControl>
+                                    <Input type="password" placeholder="••••••••" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}/>
+                        <FormField
+                            control={form.control}
+                            name="remember"
+                            render={({ field }) => (
+                                <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                                <FormControl>
+                                    <Checkbox
+                                        checked={field.value}
+                                        onCheckedChange={field.onChange}
+                                    />
+                                </FormControl>
+                                <div className="space-y-1 leading-none">
+                                    <FormLabel>
+                                        Mantener la sesión iniciada
+                                    </FormLabel>
+                                </div>
+                                </FormItem>
+                            )}
+                        />
+                        <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+                            {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Iniciar Sesión
+                        </Button>
+                        <Button variant="outline" className="w-full" asChild>
+                            <Link href="/register">Crear una cuenta</Link>
+                        </Button>
+                    </form>
+                </Form>
             </CardContent>
           </Card>
         </div>
