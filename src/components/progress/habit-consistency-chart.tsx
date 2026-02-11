@@ -1,9 +1,11 @@
 "use client"
+import { useMemo } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend } from "recharts";
-import { habitConsistencyData } from "@/lib/data";
+import { useHabits } from "@/hooks/use-habits";
 
 const RADIAN = Math.PI / 180;
 const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
+  if (!percent || percent === 0) return null;
   const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
   const x = cx + radius * Math.cos(-midAngle * RADIAN);
   const y = cy + radius * Math.sin(-midAngle * RADIAN);
@@ -16,6 +18,38 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
 };
 
 export function HabitConsistencyChart() {
+    const { habits, history } = useHabits();
+
+    const habitConsistencyData = useMemo(() => {
+        const today = new Date();
+        const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        const daysInMonthSoFar = today.getDate();
+        
+        let totalCompletions = 0;
+        
+        for (let i = 0; i < daysInMonthSoFar; i++) {
+            const date = new Date(firstDayOfMonth);
+            date.setDate(firstDayOfMonth.getDate() + i);
+            const dateString = date.toISOString().split('T')[0];
+            totalCompletions += history[dateString]?.length || 0;
+        }
+
+        const totalPossibleCompletions = habits.length * daysInMonthSoFar;
+        const pending = totalPossibleCompletions - totalCompletions;
+
+        if (totalPossibleCompletions === 0) {
+            return [
+                { name: 'Completados', habits: 0, fill: 'hsl(var(--chart-2))' },
+                { name: 'Pendientes', habits: 1, fill: 'hsl(var(--destructive))' },
+            ]
+        }
+
+        return [
+            { name: 'Completados', habits: totalCompletions, fill: 'hsl(var(--chart-2))' },
+            { name: 'Pendientes', habits: pending > 0 ? pending : 0, fill: 'hsl(var(--destructive))' },
+        ];
+    }, [habits, history]);
+
     return (
         <ResponsiveContainer width="100%" height={250}>
             <PieChart>

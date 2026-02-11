@@ -6,12 +6,11 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { type Book } from '@/lib/data';
 import { Button } from '@/components/ui/button';
-import { Loader2, AlertTriangle, ChevronLeft, BookOpen, Sparkles } from 'lucide-react';
+import { Loader2, AlertTriangle, ChevronLeft, Gem } from 'lucide-react';
 import { Card, CardTitle, CardDescription } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { extractBookPassage } from '@/ai/flows/extract-book-passage';
-import { Skeleton } from '@/components/ui/skeleton';
 
 type ReadBookClientProps = {
   book: Book | undefined;
@@ -80,41 +79,34 @@ export function ReadBookClient({ book }: ReadBookClientProps) {
                     <CardDescription>{book.author}</CardDescription>
                 </div>
                 <div className="md:col-span-2 p-6 bg-muted/30 rounded-r-lg">
-                    <h2 className="text-xl font-bold font-headline mb-4 flex items-center gap-2"><BookOpen/> Tu Espacio de Lectura</h2>
+                    <h2 className="text-xl font-bold font-headline mb-4 flex items-center gap-2"><Gem/> Tu Espacio de Lectura</h2>
                     
-                    {passage || isPassageLoading ? (
-                        <ScrollArea className="h-[50vh] pr-4">
-                            {isPassageLoading ? (
-                                <div className="space-y-4">
-                                    <Skeleton className="h-4 w-full" />
-                                    <Skeleton className="h-4 w-11/12" />
-                                    <Skeleton className="h-4 w-full" />
-                                    <br/>
-                                    <Skeleton className="h-4 w-10/12" />
-                                    <Skeleton className="h-4 w-full" />
-                                    <Skeleton className="h-4 w-9/12" />
-                                </div>
-                            ) : (
-                                <p className="whitespace-pre-line text-muted-foreground leading-relaxed">
-                                    {passage}
-                                </p>
-                            )}
-                        </ScrollArea>
-                    ) : (
-                        <div className="flex flex-col items-center justify-center text-center h-[50vh] border-2 border-dashed rounded-lg p-8">
-                            <Sparkles className="h-10 w-10 text-primary mb-4" />
-                            <h3 className="font-semibold text-lg">¿Listo para una dosis de sabiduría?</h3>
-                            <p className="text-muted-foreground mb-4">Cero puede extraer un pasaje clave de 5 minutos de este libro para ti.</p>
-                            <Button onClick={handleGetPassage} disabled={isPassageLoading}>
-                                {isPassageLoading ? (
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                ) : (
-                                    <Sparkles className="mr-2 h-4 w-4" />
-                                )}
-                                Leer un pasaje de 5 minutos
-                            </Button>
-                        </div>
-                    )}
+                    <ScrollArea className="h-[50vh] pr-4">
+                        {isPassageLoading ? (
+                            <div className="flex flex-col items-center justify-center text-center h-full p-8">
+                                <Loader2 className="h-8 w-8 text-primary animate-spin mb-4" />
+                                <p className="text-muted-foreground">Cero está buscando la mejor lectura para tu estado de ánimo...</p>
+                            </div>
+                        ) : passage ? (
+                            <p className="whitespace-pre-line text-muted-foreground leading-relaxed">
+                                {passage}
+                            </p>
+                        ) : (
+                            <div className="flex flex-col items-center justify-center text-center h-full border-2 border-dashed rounded-lg p-8">
+                                <Gem className="h-10 w-10 text-primary mb-4" />
+                                <h3 className="font-semibold text-lg">¿Listo para una dosis de sabiduría?</h3>
+                                <p className="text-muted-foreground mb-4">Cero puede extraer una "pepita de oro" (un pasaje clave) de este libro para ti.</p>
+                                <Button onClick={handleGetPassage} disabled={isPassageLoading}>
+                                    {isPassageLoading ? (
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    ) : (
+                                        <Gem className="mr-2 h-4 w-4" />
+                                    )}
+                                    Buscar Pepita de Oro
+                                </Button>
+                            </div>
+                        )}
+                    </ScrollArea>
                 </div>
             </div>
         </Card>

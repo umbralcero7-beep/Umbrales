@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Button } from '../ui/button';
-import { ListChecks, Plus } from 'lucide-react';
+import { ListChecks, Plus, Clock, BellOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
     Dialog,
@@ -14,9 +14,65 @@ import {
     DialogHeader,
     DialogTitle,
     DialogTrigger,
+    DialogClose,
   } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useHabits } from '@/hooks/use-habits';
+import type { Habit } from '@/lib/data';
+
+function ReminderDialog({ habit }: { habit: Habit }) {
+    const { setHabitReminder } = useHabits();
+    const [time, setTime] = useState(habit.reminderTime || "09:00");
+
+    const handleSave = () => {
+        setHabitReminder(habit.id, time);
+    };
+
+    const handleRemove = () => {
+        setHabitReminder(habit.id, null);
+    };
+
+    return (
+        <Dialog>
+            <DialogTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <Clock className="h-4 w-4" />
+                    <span className="sr-only">Establecer recordatorio</span>
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-xs">
+                <DialogHeader>
+                    <DialogTitle>Establecer Recordatorio</DialogTitle>
+                    <DialogDescription>
+                        Elige una hora para recibir un recordatorio diario para "{habit.name}".
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                    <Input
+                        type="time"
+                        value={time || ''}
+                        onChange={(e) => setTime(e.target.value)}
+                    />
+                </div>
+                <DialogFooter className="grid grid-cols-2 gap-2 sm:grid-cols-2 sm:gap-2">
+                    {habit.reminderTime && (
+                        <DialogClose asChild>
+                            <Button type="button" variant="outline" onClick={handleRemove}>
+                                <BellOff className="mr-2" />
+                                Quitar
+                            </Button>
+                        </DialogClose>
+                    )}
+                    <DialogClose asChild>
+                         <Button type="button" onClick={handleSave} className={cn(!habit.reminderTime && "col-span-2")}>
+                            Guardar
+                        </Button>
+                    </DialogClose>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
 
 export function HabitList() {
   const { habits, toggleHabit, addHabit } = useHabits();
@@ -25,7 +81,6 @@ export function HabitList() {
 
   const handleSaveHabit = () => {
     addHabit(newHabitName);
-    // The context handles logic, but we can close the dialog if successful
     if (newHabitName.trim() !== "") {
         setNewHabitName("");
         setIsDialogOpen(false);
@@ -48,17 +103,27 @@ export function HabitList() {
             className="flex items-center space-x-3 rounded-lg border p-4 transition-colors data-[completed=true]:bg-muted/50"
             data-completed={habit.completed}
             >
+            
             <Checkbox
                 id={habit.id}
                 checked={habit.completed}
                 onCheckedChange={() => toggleHabit(habit.id)}
             />
-            <Label
-                htmlFor={habit.id}
-                className={cn("flex-1 text-sm font-medium cursor-pointer", habit.completed && "line-through text-muted-foreground")}
-            >
-                {habit.name}
-            </Label>
+            <div className="flex-1">
+                <Label
+                    htmlFor={habit.id}
+                    className={cn("text-sm font-medium cursor-pointer", habit.completed && "line-through text-muted-foreground")}
+                >
+                    {habit.name}
+                </Label>
+                {habit.reminderTime && (
+                    <p className="text-xs text-muted-foreground flex items-center gap-1 pt-1">
+                        <Clock className="h-3 w-3" />
+                        {habit.reminderTime}
+                    </p>
+                )}
+            </div>
+            <ReminderDialog habit={habit} />
             </div>
         ))
       ) : (

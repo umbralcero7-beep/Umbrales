@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 type ThemeOption = {
-    name: 'zen' | 'calma' | 'cosmos';
+    name: 'zen' | 'calma' | 'cosmos' | 'bosque' | 'atardecer';
     label: string;
     description: string;
     colors: string[];
@@ -29,6 +29,18 @@ const themes: ThemeOption[] = [
         label: '🌌 Tema Cosmos',
         description: 'Inspirado en el misterio del universo nocturno.',
         colors: ['bg-[#9370db]', 'bg-[#161320]', 'bg-[#e6b84d]']
+    },
+    {
+        name: 'bosque',
+        label: '🌳 Tema Bosque',
+        description: 'Verdes profundos para una sensación de calma y naturaleza.',
+        colors: ['bg-[#45B86A]', 'bg-[#1D2B23]', 'bg-[#C49264]']
+    },
+    {
+        name: 'atardecer',
+        label: '🌅 Tema Atardecer',
+        description: 'Colores cálidos inspirados en la magia de un atardecer.',
+        colors: ['bg-[#F97316]', 'bg-[#1F1A2B]', 'bg-[#ED5E93]']
     }
 ];
 

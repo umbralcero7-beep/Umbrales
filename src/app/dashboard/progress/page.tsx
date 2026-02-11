@@ -14,13 +14,13 @@ import {
   import { MoodChart } from "@/components/progress/mood-chart";
   import { HabitChart } from "@/components/progress/habit-chart";
   import { achievements } from "@/lib/data";
-  import { Award, BookOpen, Feather, Flame, Shield, Smile, Sunrise, Wind } from "lucide-react";
+  import { Award, BookOpen, Feather, Flame, Shield, Smile, Sunrise, Wind, Clock } from "lucide-react";
   import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
   import { HabitConsistencyChart } from "@/components/progress/habit-consistency-chart";
   import { MoodAnalysis } from "@/components/progress/mood-analysis";
   
   const iconMap: { [key: string]: React.ElementType } = {
-    Feather, Flame, BookOpen, Smile, Wind, Sunrise, Award, Shield
+    Feather, Flame, BookOpen, Smile, Wind, Sunrise, Award, Shield, Clock
   };
   
   export default function ProgressPage() {

@@ -1,4 +1,6 @@
 import { PlaceHolderImages } from "./placeholder-images";
+import type { AnalyzeJournalEntryOutput } from '@/ai/flows/analyze-journal-entry';
+
 
 export type Mood = {
   name: string;
@@ -18,6 +20,7 @@ export type Habit = {
   id: string;
   name: string;
   completed: boolean;
+  reminderTime?: string | null;
 };
 
 // Start with no habits for a new user
@@ -156,11 +159,8 @@ export type JournalEntry = {
     id: string;
     date: string;
     content: string;
-    sentiment: "positive" | "negative" | "neutral";
+    analysis: AnalyzeJournalEntryOutput;
 };
-
-// Start with no journal entries for a new user
-export const journalEntries: JournalEntry[] = [];
 
 export const moodData: { date: string; mood: string }[] = [
     { date: 'Hace 6 días', mood: 'Feliz' },
@@ -194,6 +194,7 @@ export const achievements = [
     { id: '4', name: 'Maestro del Ánimo', unlocked: false, icon: 'Smile', description: 'Registra tu estado de ánimo durante 15 días.' },
     { id: '5', name: 'Calma Alcanzada', unlocked: true, icon: 'Wind', description: 'Completa 10 ejercicios de respiración en la sección Calma.' },
     { id: '6', name: 'Madrugador', unlocked: false, icon: 'Sunrise', description: 'Completa un hábito antes de las 8 a.m. por 5 días.' },
+    { id: '9', name: 'Planificador Maestro', unlocked: false, icon: 'Clock', description: 'Establece tu primer recordatorio para un hábito.'},
     { id: '7', name: 'Logro de 1 Mes', unlocked: false, icon: 'Award', description: 'Mantén una racha de hábitos durante 30 días.' },
     { id: '8', name: 'Héroe de Hábitos', unlocked: false, icon: 'Shield', description: 'Completa más de 50 hábitos en total.' },
 ];

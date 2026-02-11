@@ -29,13 +29,27 @@ export function UserNav({ isSidebar = false, side = "bottom", align = "end" }: U
     const [userName, setUserName] = useState('Usuario');
     const [avatarFallback, setAvatarFallback] = useState('U');
 
-    useEffect(() => {
+    const updateName = () => {
         const name = localStorage.getItem('userName');
         if (name) {
-        setUserName(name);
-        const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-        setAvatarFallback(initials);
+            setUserName(name);
+            const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+            setAvatarFallback(initials);
         }
+    };
+
+    useEffect(() => {
+        updateName();
+
+        const handleStorageChange = () => {
+            updateName();
+        };
+
+        window.addEventListener('storage', handleStorageChange);
+
+        return () => {
+            window.removeEventListener('storage', handleStorageChange);
+        };
     }, []);
 
   if (isSidebar) {

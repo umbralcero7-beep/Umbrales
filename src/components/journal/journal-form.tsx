@@ -26,16 +26,24 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Lightbulb, Loader2, ListTree, Smile, Sparkles, Star } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { useJournal } from "@/hooks/use-journal";
 
 const formSchema = z.object({
   entry: z.string().min(50, "Tu entrada debe tener al menos 50 caracteres para ser analizada."),
 });
+
+const templates = [
+    { name: "Gratitud", content: "Hoy estoy agradecido/a por:\n1. \n2. \n3. \n\n" },
+    { name: "Logros", content: "Mis logros de hoy:\n- \n\nLo que me hizo sentir orgulloso/a:\n\n" },
+    { name: "Aprendizaje", content: "La lección más importante de hoy fue:\n\nCómo la aplicaré mañana:\n\n" }
+]
 
 export function JournalForm() {
   const [analysis, setAnalysis] = useState<AnalyzeJournalEntryOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [userName, setUserName] = useState('');
   const { toast } = useToast();
+  const { addJournalEntry } = useJournal();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -58,10 +66,8 @@ export function JournalForm() {
         userName: userName || 'tú'
       });
       setAnalysis(result);
-      toast({
-        title: "Análisis Completo",
-        description: "Cero ha analizado tu entrada de diario.",
-      });
+      addJournalEntry(values.entry, result);
+      form.reset();
     } catch (error) {
       console.error("Error en el análisis del diario:", error);
       toast({
@@ -103,6 +109,16 @@ export function JournalForm() {
                   </FormItem>
                 )}
               />
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-muted-foreground">O empieza con una plantilla:</p>
+                <div className="flex flex-wrap gap-2">
+                    {templates.map(template => (
+                        <Button key={template.name} type="button" size="sm" variant="outline" onClick={() => form.setValue('entry', template.content, { shouldValidate: true })}>
+                            {template.name}
+                        </Button>
+                    ))}
+                </div>
+              </div>
               <Button type="submit" disabled={isLoading}>
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Analizar Entrada

@@ -3,10 +3,12 @@ import { DailyMessage } from "@/components/dashboard/daily-message";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import { Library, Wind } from "lucide-react";
+import { OnboardingTour } from "@/components/onboarding/onboarding-tour";
 
 export default function DashboardPage() {
   return (
     <div className="flex flex-col items-center justify-start text-center gap-12 py-8 md:py-12 px-4">
+        <OnboardingTour />
         <DailyMessage />
         
         <div className="w-full max-w-md space-y-8">

@@ -1,5 +1,6 @@
 "use client"
 
+import { useMemo } from "react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts"
 
 import {
@@ -8,7 +9,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart"
-import { habitCompletionData } from "@/lib/data"
+import { useHabits } from "@/hooks/use-habits"
 
 const chartConfig = {
   completed: {
@@ -18,6 +19,32 @@ const chartConfig = {
 } satisfies ChartConfig
 
 export function HabitChart() {
+  const { history } = useHabits();
+
+  const habitCompletionData = useMemo(() => {
+    const data = [];
+    const days = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+    const today = new Date();
+
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(today.getDate() - i);
+      
+      const dateString = date.toISOString().split('T')[0];
+      const dayName = days[date.getDay()];
+      
+      const completedCount = history[dateString]?.length || 0;
+      
+      data.push({
+        date: dayName,
+        completed: completedCount,
+      });
+    }
+    return data;
+  }, [history]);
+  
+  const maxCompleted = Math.max(...habitCompletionData.map(d => d.completed), 1)
+
   return (
     <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
       <BarChart accessibilityLayer data={habitCompletionData}>
@@ -33,7 +60,7 @@ export function HabitChart() {
             axisLine={false}
             tickMargin={10}
             allowDecimals={false}
-            domain={[0, 5]}
+            domain={[0, maxCompleted > 4 ? maxCompleted : 5]}
         />
         <ChartTooltip
           cursor={false}

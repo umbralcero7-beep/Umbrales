@@ -7,6 +7,9 @@ import {
 } from "@/components/ui/card";
 import { ThemeSwitcher } from "@/components/settings/theme-switcher";
 import { PasswordForm } from "@/components/settings/password-form";
+import { NameForm } from "@/components/settings/name-form";
+import { PrivacySettings } from "@/components/settings/privacy-settings";
+import { Separator } from "@/components/ui/separator";
 
 export default function SettingsPage() {
     return (
@@ -35,8 +38,21 @@ export default function SettingsPage() {
                         Actualiza la configuración de tu cuenta.
                     </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-6">
+                    <NameForm />
+                    <Separator />
                     <PasswordForm />
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader>
+                    <CardTitle>Datos y Privacidad</CardTitle>
+                    <CardDescription>
+                        Gestiona tus datos personales y la configuración de privacidad.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <PrivacySettings />
                 </CardContent>
             </Card>
             <div className="text-center text-sm text-muted-foreground pt-4">

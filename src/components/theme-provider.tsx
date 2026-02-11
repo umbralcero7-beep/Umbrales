@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react'
 
-type Theme = "zen" | "calma" | "cosmos"
+type Theme = "zen" | "calma" | "cosmos" | "bosque" | "atardecer";
 
 type ThemeProviderProps = {
   children: React.ReactNode
@@ -28,18 +28,23 @@ export function ThemeProvider({
   storageKey = 'ui-theme',
   ...props
 }: ThemeProviderProps) {
-  const [theme, setTheme] = useState<Theme>(() => {
-    if (typeof window === 'undefined') {
-      return defaultTheme;
-    }
-    return (localStorage.getItem(storageKey) as Theme | null) || defaultTheme
-  });
+  // 1. Initialize with the default theme to ensure server and client match.
+  const [theme, setTheme] = useState<Theme>(defaultTheme)
 
+  // 2. On mount, read the theme from localStorage and update the state.
   useEffect(() => {
-    const root = window.document.documentElement;
-    root.setAttribute('data-theme', theme);
-    localStorage.setItem(storageKey, theme);
-  }, [theme, storageKey]);
+    const storedTheme = localStorage.getItem(storageKey) as Theme | null
+    if (storedTheme) {
+      setTheme(storedTheme)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // Run only once on mount
+
+  // 3. Whenever the theme changes, update the DOM and localStorage.
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    localStorage.setItem(storageKey, theme)
+  }, [theme, storageKey])
 
   useEffect(() => {
     if ('serviceWorker' in navigator) {

@@ -17,12 +17,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import { getAdviceForMood, type GetAdviceForMoodOutput } from '@/ai/flows/get-advice-for-mood';
 import { extractReadingForMood } from '@/ai/flows/extract-reading-for-mood';
-import { Loader2, BookOpen, AlertTriangle } from 'lucide-react';
+import { Loader2, AlertTriangle, Gem } from 'lucide-react';
 import { Textarea } from '../ui/textarea';
 import { Label } from '../ui/label';
 import { Button } from '../ui/button';
 import { ScrollArea } from '../ui/scroll-area';
-import { Skeleton } from '../ui/skeleton';
 
 const CeroIcon = ({ className }: { className?: string }) => (
     <div className={cn("relative text-primary", className)}>
@@ -262,8 +261,8 @@ export function MoodSelector() {
                 <AlertDialogAction onClick={() => setIsDialogOpen(false)}>Cerrar</AlertDialogAction>
                 {advice && !error && selectedBookTitle && (
                     <Button variant="outline" onClick={handleReadPassage}>
-                        <BookOpen className="mr-2" />
-                        Leer pasaje de 5 min
+                        <Gem className="mr-2" />
+                        Buscar Pepita de Oro
                     </Button>
                 )}
               </AlertDialogFooter>
@@ -283,15 +282,9 @@ export function MoodSelector() {
             <ScrollArea className="flex-1 -mx-6 px-6">
                 <div className="py-4 pr-4">
                 {isReadingLoading ? (
-                    <div className="space-y-2">
-                        <Skeleton className="h-4 w-full rounded-full" />
-                        <Skeleton className="h-4 w-10/12 rounded-full" />
-                        <Skeleton className="h-4 w-11/12 rounded-full" />
-                        <div className="pt-4 space-y-2">
-                            <Skeleton className="h-4 w-full rounded-full" />
-                            <Skeleton className="h-4 w-full rounded-full" />
-                            <Skeleton className="h-4 w-10/12 rounded-full" />
-                        </div>
+                    <div className="flex flex-col items-center justify-center text-center h-full p-8">
+                        <Loader2 className="h-8 w-8 text-primary animate-spin mb-4" />
+                        <p className="text-muted-foreground">Cero está buscando la mejor lectura para tu estado de ánimo...</p>
                     </div>
                 ) : (
                     <p className="whitespace-pre-line text-sm text-foreground/80 leading-relaxed">

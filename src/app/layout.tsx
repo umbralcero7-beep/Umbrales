@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { ThemeProvider } from '@/components/theme-provider';
 import { PushNotificationsProvider } from '@/components/notifications/push-notifications-provider';
 import { HabitsProvider } from '@/hooks/use-habits';
+import { JournalProvider } from '@/hooks/use-journal';
 
 export const metadata: Metadata = {
   title: 'Umbral',
@@ -30,7 +31,9 @@ export default function RootLayout({
         <ThemeProvider defaultTheme='zen'>
           <PushNotificationsProvider>
             <HabitsProvider>
-              {children}
+              <JournalProvider>
+                {children}
+              </JournalProvider>
             </HabitsProvider>
           </PushNotificationsProvider>
           <Toaster />
