@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/firebase';
+import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
 
 const passwordSchema = z.object({
   currentPassword: z.string().min(1, { message: 'Por favor, introduce tu contraseña actual.' }),
@@ -19,19 +21,38 @@ const passwordSchema = z.object({
 
 export function PasswordForm() {
   const { toast } = useToast();
+  const auth = useAuth();
   const form = useForm<z.infer<typeof passwordSchema>>({
     resolver: zodResolver(passwordSchema),
     defaultValues: { currentPassword: '', newPassword: '', confirmPassword: '' },
   });
 
-  function onSubmit(values: z.infer<typeof passwordSchema>) {
-    // In a real app, you'd handle password change logic here.
-    console.log(values);
-    toast({
-      title: 'Contraseña Actualizada',
-      description: 'Tu contraseña ha sido cambiada exitosamente.',
-    });
-    form.reset();
+  async function onSubmit(values: z.infer<typeof passwordSchema>) {
+    const user = auth.currentUser;
+    if (!user || !user.email) {
+      toast({ variant: 'destructive', title: 'Error', description: 'No se ha encontrado ningún usuario autenticado.' });
+      return;
+    }
+
+    try {
+      const credential = EmailAuthProvider.credential(user.email, values.currentPassword);
+      await reauthenticateWithCredential(user, credential);
+      await updatePassword(user, values.newPassword);
+      
+      toast({
+        title: 'Contraseña Actualizada',
+        description: 'Tu contraseña ha sido cambiada exitosamente.',
+      });
+      form.reset();
+
+    } catch (error) {
+      console.error("Password change failed:", error);
+      toast({
+        variant: 'destructive',
+        title: 'Error al cambiar la contraseña',
+        description: 'La contraseña actual es incorrecta o ha ocurrido un error.',
+      });
+    }
   }
 
   return (
@@ -76,7 +97,7 @@ export function PasswordForm() {
             </FormItem>
           )}
         />
-        <Button type="submit">Cambiar Contraseña</Button>
+        <Button type="submit" disabled={form.formState.isSubmitting}>Cambiar Contraseña</Button>
       </form>
     </Form>
   );

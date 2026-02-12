@@ -10,11 +10,15 @@ import {
 } from '@capacitor/push-notifications';
 import { Capacitor } from '@capacitor/core';
 import { useRouter } from 'next/navigation';
+import { useUser, useFirestore } from '@/firebase';
+import { arrayUnion, doc, setDoc } from 'firebase/firestore';
 
 // This component wraps the app and handles all push notification logic.
 export function PushNotificationsProvider({ children }: { children: React.ReactNode }) {
   const { toast } = useToast();
   const router = useRouter();
+  const { user } = useUser();
+  const firestore = useFirestore();
 
   useEffect(() => {
     // We only want to run this on native mobile platforms, not in the browser.
@@ -40,15 +44,26 @@ export function PushNotificationsProvider({ children }: { children: React.ReactN
       
       const addListeners = async () => {
         // Fired when registration is successful
-        await PushNotifications.addListener('registration', (token: Token) => {
+        await PushNotifications.addListener('registration', async (token: Token) => {
           console.log('Push registration success, token: ' + token.value);
-          // --- IMPORTANT ---
-          // Here, you would send the token to your backend server to store it.
-          // This allows you to send notifications to this specific device later.
-          // Example: fetch('https://your-api.com/register-device', {
-          //   method: 'POST',
-          //   body: JSON.stringify({ token: token.value, userId: '...' }),
-          // });
+          
+          if (!user) {
+            console.error("No user logged in, cannot store push token.");
+            return;
+          }
+
+          // Send the token to your backend server to store it.
+          const userRef = doc(firestore, 'users', user.uid);
+          try {
+            // Use set with merge to create the doc if it doesn't exist,
+            // and arrayUnion to add the token without creating duplicates.
+            await setDoc(userRef, {
+              pushTokens: arrayUnion(token.value)
+            }, { merge: true });
+            console.log('Push token stored in Firestore.');
+          } catch (error) {
+            console.error('Failed to store push token in Firestore:', error);
+          }
         });
 
         // Fired when registration fails
@@ -83,10 +98,12 @@ export function PushNotificationsProvider({ children }: { children: React.ReactN
         );
       }
 
-      addListeners();
-      registerPush();
+      if (user) {
+        addListeners();
+        registerPush();
+      }
     }
-  }, [toast, router]);
+  }, [toast, router, user, firestore]);
 
   return <>{children}</>;
 }

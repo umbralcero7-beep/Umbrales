@@ -4,18 +4,20 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import Image from "next/image"
 import { cn } from "@/lib/utils"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { useUser } from "@/hooks/use-user"
+import { useUser, useAuth } from "@/firebase"
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react"
+import { setPersistence, signInWithEmailAndPassword, browserLocalPersistence, browserSessionPersistence } from "firebase/auth";
+import { useToast } from "@/hooks/use-toast";
+
 
 const Logo = ({ className }: { className?: string }) => (
     <svg
@@ -50,8 +52,10 @@ const Logo = ({ className }: { className?: string }) => (
   });
 
 export default function LoginPage() {
-    const { login, userEmail, isLoading } = useUser();
+    const { user, isUserLoading } = useUser();
+    const auth = useAuth();
     const router = useRouter();
+    const { toast } = useToast();
 
     const form = useForm<z.infer<typeof loginSchema>>({
         resolver: zodResolver(loginSchema),
@@ -59,18 +63,28 @@ export default function LoginPage() {
     });
 
     useEffect(() => {
-        if (userEmail && !isLoading) {
+        if (user && !isUserLoading) {
             router.push('/dashboard');
         }
-    }, [userEmail, isLoading, router]);
+    }, [user, isUserLoading, router]);
 
-    function onSubmit(values: z.infer<typeof loginSchema>) {
-        // NOTE: Password is not validated as we don't have a backend yet.
-        // This is a temporary auth fix for user data isolation.
-        login(values.email);
+    async function onSubmit(values: z.infer<typeof loginSchema>) {
+      try {
+        const persistence = values.remember ? browserLocalPersistence : browserSessionPersistence;
+        await setPersistence(auth, persistence);
+        await signInWithEmailAndPassword(auth, values.email, values.password);
+        // The onAuthStateChanged listener in the provider will handle the redirect.
+      } catch (error: any) {
+        console.error("Login failed:", error);
+        toast({
+          variant: "destructive",
+          title: "Error al iniciar sesión",
+          description: "Correo o contraseña incorrectos. Por favor, inténtalo de nuevo.",
+        });
+      }
     }
     
-    if (isLoading || userEmail) {
+    if (isUserLoading || user) {
         return (
             <div className="flex h-screen items-center justify-center">
                 <Loader2 className="h-8 w-8 animate-spin" />

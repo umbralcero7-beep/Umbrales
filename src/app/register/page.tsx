@@ -12,7 +12,10 @@ import { Input } from '@/components/ui/input';
 import { OnboardingQuiz } from '@/components/onboarding/onboarding-quiz';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
-import { useUser } from '@/hooks/use-user';
+import { useAuth, useFirestore } from '@/firebase';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
 
 const registerSchema = z.object({
   name: z.string().min(2, { message: 'Tu nombre debe tener al menos 2 caracteres.' }),
@@ -49,23 +52,41 @@ const Logo = ({ className }: { className?: string }) => (
 export default function RegisterPage() {
   const [step, setStep] = useState(1);
   const [userName, setUserName] = useState('');
-  const { login } = useUser();
+  const auth = useAuth();
+  const firestore = useFirestore();
+  const { toast } = useToast();
 
   const registerForm = useForm<z.infer<typeof registerSchema>>({
     resolver: zodResolver(registerSchema),
     defaultValues: { name: '', email: '', password: '' },
   });
 
-  function onRegisterSubmit(values: z.infer<typeof registerSchema>) {
+  async function onRegisterSubmit(values: z.infer<typeof registerSchema>) {
     setUserName(values.name);
-    if (typeof window !== 'undefined') {
-      // Store name with user-specific key
-      const userKey = `userName_${values.email}`;
-      localStorage.setItem(userKey, values.name);
+    try {
+        const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
+        const user = userCredential.user;
+
+        // Create user document in Firestore
+        await setDoc(doc(firestore, "users", user.uid), {
+            id: user.uid,
+            email: values.email,
+            username: values.name,
+            subscriptionType: 'free',
+        });
+        
+        // The onAuthStateChanged listener will handle the session state.
+        // Proceed to onboarding.
+        setStep(2);
+
+    } catch (error: any) {
+        console.error("Registration failed:", error);
+        toast({
+            variant: "destructive",
+            title: "Error en el registro",
+            description: "Este correo electrónico ya podría estar en uso. Por favor, inténtalo con otro.",
+        });
     }
-    // "Log in" the user with the simple session manager
-    login(values.email);
-    setStep(2);
   }
 
   return (
@@ -115,7 +136,7 @@ export default function RegisterPage() {
                                         <FormMessage />
                                     </FormItem>
                                 )}/>
-                                <Button type="submit" className="w-full">
+                                <Button type="submit" className="w-full" disabled={registerForm.formState.isSubmitting}>
                                     Siguiente
                                 </Button>
                             </form>

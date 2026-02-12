@@ -1,25 +1,52 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { habits as initialHabitsData, type Habit as HabitWithCompletion } from '@/lib/data';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { PushNotifications } from '@capacitor/push-notifications';
+import { 
+  useUser, 
+  useFirestore, 
+  useCollection, 
+  useMemoFirebase, 
+  addDocumentNonBlocking, 
+  updateDocumentNonBlocking, 
+  setDocumentNonBlocking, 
+  deleteDocumentNonBlocking 
+} from '@/firebase';
+import { collection, doc, query, where, getDocs, writeBatch } from 'firebase/firestore';
 import { Capacitor } from '@capacitor/core';
-import { useUser } from './use-user';
+import { PushNotifications } from '@capacitor/push-notifications';
+import { initialHabitsData } from '@/lib/data';
 
-// Base habit definition, stored without completion status
-export type Habit = Omit<HabitWithCompletion, 'completed'>;
-// Habit type for UI, with completion status for the current day
-export type DisplayHabit = HabitWithCompletion;
+// Habit structure in Firestore
+export interface Habit {
+  id: string;
+  name: string;
+  userId: string;
+  reminderTime?: string | null;
+  createdAt: number;
+}
 
-// Structure for storing completion history
+// Habit completion structure in Firestore
+export interface HabitCompletion {
+  userId: string;
+  habitId: string;
+  date: string; // YYYY-MM-DD
+}
+
+// For UI display
+export interface DisplayHabit extends Habit {
+  completed: boolean;
+}
+
+// Structure for storing completion history for charts
 interface HabitHistory {
   [date: string]: string[]; // Key: YYYY-MM-DD, Value: array of completed habit IDs
 }
 
 interface HabitsContextType {
-  habits: DisplayHabit[]; // Derived state for UI
-  history: HabitHistory; // Full history for charts
+  habits: DisplayHabit[];
+  history: HabitHistory;
+  isLoading: boolean;
   addHabit: (habitName: string) => void;
   toggleHabit: (id: string) => void;
   setHabitReminder: (id: string, time: string | null) => void;
@@ -27,197 +54,166 @@ interface HabitsContextType {
 
 const HabitsContext = createContext<HabitsContextType | undefined>(undefined);
 
-const getStorageKey = (userEmail: string) => `umbral_habits_v2_${userEmail}`;
 const getTodayDateString = () => new Date().toISOString().split('T')[0];
 
 export function HabitsProvider({ children }: { children: React.ReactNode }) {
   const { toast } = useToast();
-  const { userEmail } = useUser();
+  const { user } = useUser();
+  const firestore = useFirestore();
+
+  // --- Data Fetching from Firestore ---
+  const habitsCollectionRef = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'habits') : null, [user, firestore]);
+  const { data: firestoreHabits, isLoading: isLoadingHabits } = useCollection<Habit>(habitsCollectionRef);
+
+  const completionsCollectionRef = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'habitCompletions') : null, [user, firestore]);
+  const { data: firestoreCompletions, isLoading: isLoadingCompletions } = useCollection<HabitCompletion>(completionsCollectionRef);
   
-  // State for base habit configurations (id, name, reminder)
-  const [baseHabits, setBaseHabits] = useState<Habit[]>([]);
-  // State for completion history
-  const [history, setHistory] = useState<HabitHistory>({});
-
-  // Push notification permission setup
+  // --- Data Seeding for New Users ---
   useEffect(() => {
-    if (Capacitor.isNativePlatform()) {
-      PushNotifications.checkPermissions().then(status => {
-        if (status.receive !== 'granted') {
-          PushNotifications.requestPermissions().then(result => {
-            if (result.receive !== 'granted') {
-              toast({
-                variant: 'destructive',
-                title: 'Permiso denegado',
-                description: 'No se podrán enviar recordatorios de hábitos.',
-              });
-            }
-          });
-        }
-      });
-    }
-  }, [toast]);
-
-  // Load data from localStorage on user change
-  useEffect(() => {
-    if (userEmail) {
-      try {
-        const storageKey = getStorageKey(userEmail);
-        const storedJson = localStorage.getItem(storageKey);
-        if (storedJson) {
-          const { habits, history: storedHistory } = JSON.parse(storedJson);
-          setBaseHabits(habits || []);
-          setHistory(storedHistory || {});
-        } else {
-          // Set initial data for a new user
-          const cleanInitialHabits = initialHabitsData.map(({ completed, ...rest }) => rest);
-          setBaseHabits(cleanInitialHabits);
-          setHistory({});
-        }
-      } catch (error) {
-        console.error("Error reading habits from localStorage", error);
-        const cleanInitialHabits = initialHabitsData.map(({ completed, ...rest }) => rest);
-        setBaseHabits(cleanInitialHabits);
-        setHistory({});
-      }
-    } else {
-        // Clear data if user logs out
-        setBaseHabits([]);
-        setHistory({});
-    }
-  }, [userEmail]);
-
-  // Persist data to localStorage whenever it changes
-  useEffect(() => {
-    if (userEmail) {
-        try {
-            const storageKey = getStorageKey(userEmail);
-            const dataToStore = { habits: baseHabits, history };
-            localStorage.setItem(storageKey, JSON.stringify(dataToStore));
-        } catch (error) {
-            console.error("Error saving habits to localStorage", error);
-        }
-    }
-  }, [baseHabits, history, userEmail]);
-
-  const addHabit = (habitName: string) => {
-    if (habitName.trim() === "") {
-        toast({
-            variant: "destructive",
-            title: "El nombre no puede estar vacío",
-            description: "Por favor, escribe un nombre para tu hábito.",
+    // When habits are loaded for a user for the first time
+    if (user && !isLoadingHabits && firestoreHabits && firestoreHabits.length === 0) {
+      console.log('No habits found for user, seeding initial data...');
+      const batch = writeBatch(firestore);
+      initialHabitsData.forEach(habitData => {
+        const habitId = `habit-${Date.now()}-${Math.random()}`;
+        const newHabitRef = doc(firestore, 'users', user.uid, 'habits', habitId);
+        batch.set(newHabitRef, {
+          userId: user.uid,
+          name: habitData.name,
+          createdAt: Date.now(),
         });
-        return;
+      });
+      batch.commit().catch(err => console.error("Error seeding initial habits:", err));
     }
-    const newHabit: Habit = {
-        id: `habit-${Date.now()}`,
-        name: habitName.trim(),
-    };
-    setBaseHabits((prev) => [...prev, newHabit]);
+  }, [user, firestoreHabits, isLoadingHabits, firestore]);
+
+
+  // --- Derived State ---
+  const history = useMemo<HabitHistory>(() => {
+    if (!firestoreCompletions) return {};
+    return firestoreCompletions.reduce((acc, completion) => {
+      if (!acc[completion.date]) {
+        acc[completion.date] = [];
+      }
+      acc[completion.date].push(completion.habitId);
+      return acc;
+    }, {} as HabitHistory);
+  }, [firestoreCompletions]);
+
+  const habits = useMemo<DisplayHabit[]>(() => {
+    if (!firestoreHabits) return [];
+    const today = getTodayDateString();
+    const completedTodayIds = new Set(history[today] || []);
+    return firestoreHabits
+      .map(habit => ({
+        ...habit,
+        completed: completedTodayIds.has(habit.id),
+      }))
+      .sort((a, b) => a.createdAt - b.createdAt);
+  }, [firestoreHabits, history]);
+
+  // --- Mutations ---
+  const addHabit = (habitName: string) => {
+    if (!user || !habitsCollectionRef) return;
+    if (habitName.trim() === "") {
+      toast({
+        variant: "destructive",
+        title: "El nombre no puede estar vacío",
+      });
+      return;
+    }
+    addDocumentNonBlocking(habitsCollectionRef, {
+      userId: user.uid,
+      name: habitName.trim(),
+      createdAt: Date.now(),
+    });
     toast({
-        title: "¡Hábito Añadido!",
-        description: `Has añadido "${newHabit.name}" a tu lista.`,
+      title: "¡Hábito Añadido!",
+      description: `Has añadido "${habitName.trim()}" a tu lista.`,
     });
   };
 
-  const toggleHabit = (id: string) => {
+  const toggleHabit = (habitId: string) => {
+    if (!user) return;
     const today = getTodayDateString();
-    const habit = baseHabits.find(h => h.id === id);
+    const habit = habits.find(h => h.id === habitId);
     if (!habit) return;
 
-    const completedToday = new Set(history[today] || []);
-    let isCompleting: boolean;
+    const completionId = `${habitId}-${today}`;
+    const completionDocRef = doc(firestore, 'users', user.uid, 'habitCompletions', completionId);
 
-    if (completedToday.has(id)) {
-      completedToday.delete(id);
-      isCompleting = false;
+    if (habit.completed) {
+      // It's currently completed, so we delete the completion doc
+      deleteDocumentNonBlocking(completionDocRef);
     } else {
-      completedToday.add(id);
-      isCompleting = true;
-    }
-    
-    setHistory(prev => ({ ...prev, [today]: Array.from(completedToday) }));
-    
-    if (isCompleting) {
-        toast({
-            title: "¡Hábito completado!",
-            description: `¡Buen trabajo en "${habit.name}"!`,
-        });
+      // It's not completed, so we create the completion doc
+      setDocumentNonBlocking(completionDocRef, {
+        userId: user.uid,
+        habitId: habitId,
+        date: today,
+      }, {});
+      toast({
+        title: "¡Hábito completado!",
+        description: `¡Buen trabajo en "${habit.name}"!`,
+      });
     }
   };
 
-  const setHabitReminder = async (id: string, time: string | null) => {
-    const habit = baseHabits.find(h => h.id === id);
+  const setHabitReminder = async (habitId: string, time: string | null) => {
+    if (!user) return;
+    const habit = habits.find(h => h.id === habitId);
     if (!habit) return;
 
-    // Persist the reminder time
-    setBaseHabits(habits => habits.map(h => h.id === id ? { ...h, reminderTime: time } : h));
+    const habitDocRef = doc(firestore, 'users', user.uid, 'habits', habitId);
+    updateDocumentNonBlocking(habitDocRef, { reminderTime: time });
 
     if (Capacitor.isNativePlatform()) {
-      const notificationId = id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % 10000;
+        try {
+            const notificationIdStr = habit.id.replace(/[^0-9]/g, '').substring(0, 9);
+            const notificationId = parseInt(notificationIdStr, 10);
+            
+            await PushNotifications.cancel({ notifications: [{ id: notificationId }] }).catch(e => console.warn("Could not cancel notifications.", e));
 
-      await PushNotifications.cancel({ notifications: [{ id: notificationId }] });
+            if (time) {
+                const [hour, minute] = time.split(':').map(Number);
+                await PushNotifications.createChannel({
+                    id: 'habit_reminders',
+                    name: 'Recordatorios de Hábitos',
+                    importance: 4,
+                    visibility: 1,
+                });
+                
+                await PushNotifications.schedule({
+                    notifications: [{
+                        id: notificationId,
+                        channelId: 'habit_reminders',
+                        title: 'Recordatorio de Hábito',
+                        body: `Es hora de tu hábito: "${habit.name}"`,
+                        schedule: { on: { hour, minute }, repeats: true },
+                        smallIcon: 'ic_stat_icon_name',
+                        largeIcon: 'ic_launcher',
+                    }]
+                });
 
-      if (time) {
-          const [hour, minute] = time.split(':').map(Number);
-          try {
-              await PushNotifications.schedule({
-                  notifications: [
-                      {
-                          id: notificationId,
-                          title: `Recordatorio de Hábito: ${habit.name}`,
-                          body: `¡Es hora de completar tu hábito diario! No te rindas.`,
-                          schedule: { on: { hour, minute }, repeats: true },
-                          sound: 'default',
-                          smallIcon: 'ic_stat_icon_config_sample',
-                      },
-                  ],
-              });
-              toast({
-                  title: 'Recordatorio establecido',
-                  description: `Se te recordará sobre "${habit.name}" todos los días a las ${time}.`,
-              });
-          } catch (error) {
-              console.error("Error scheduling notification", error);
-              toast({
-                  variant: "destructive",
-                  title: "Error al guardar recordatorio",
-                  description: "No se pudo establecer el recordatorio. Asegúrate de haber otorgado permisos.",
-              });
-          }
-      } else {
-          toast({
-              title: 'Recordatorio eliminado',
-              description: `Ya no se te recordará sobre "${habit.name}".`,
-          });
-      }
+                toast({ title: 'Recordatorio Guardado', description: `Recibirás una notificación para "${habit.name}" a las ${time} en tu dispositivo.` });
+            } else {
+                 toast({ title: 'Recordatorio Eliminado', description: `Ya no se te recordará sobre "${habit.name}".` });
+            }
+        } catch (e) {
+            console.error("Error scheduling notification:", e);
+            toast({ variant: 'destructive', title: 'Error de Notificación', description: 'No se pudo programar el recordatorio.' });
+        }
     } else {
-      if (time) {
-        toast({
-          title: 'Recordatorio Guardado',
-          description: 'Las notificaciones push solo están disponibles en la app móvil.',
-        });
-      } else {
-        toast({
-            title: 'Recordatorio eliminado',
-            description: `Ya no se te recordará sobre "${habit.name}".`,
-        });
-      }
+        if (time) {
+            toast({ title: 'Recordatorio Guardado', description: `Has guardado el recordatorio para "${habit.name}" a las ${time}.` });
+        } else {
+            toast({ title: 'Recordatorio Eliminado' });
+        }
     }
   };
 
-  // Derive the habits to display in the UI for the current day
-  const habitsForDisplay: DisplayHabit[] = React.useMemo(() => {
-    const today = getTodayDateString();
-    const completedTodayIds = new Set(history[today] || []);
-    return baseHabits.map(habit => ({
-      ...habit,
-      completed: completedTodayIds.has(habit.id),
-    }));
-  }, [baseHabits, history]);
-
   return (
-    <HabitsContext.Provider value={{ habits: habitsForDisplay, history, addHabit, toggleHabit, setHabitReminder }}>
+    <HabitsContext.Provider value={{ habits, history, isLoading: isLoadingHabits || isLoadingCompletions, addHabit, toggleHabit, setHabitReminder }}>
       {children}
     </HabitsContext.Provider>
   );

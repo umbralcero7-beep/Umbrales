@@ -16,15 +16,21 @@ export const moods: Mood[] = [
     { name: 'Triste', emoji: '😢' },
 ];
 
-export type Habit = {
-  id: string;
-  name: string;
-  completed: boolean;
-  reminderTime?: string | null;
-};
+// This type is now defined in use-habits.tsx for Firestore integration.
+// export type Habit = {
+//   id: string;
+//   name: string;
+//   completed: boolean;
+//   reminderTime?: string | null;
+// };
 
-// Start with no habits for a new user
-export const habits: Habit[] = [];
+// This is now handled in use-habits.tsx to populate Firestore for new users.
+export const initialHabitsData: {name: string}[] = [
+    { name: 'Caminata diaria de 15 minutos' },
+    { name: '5 minutos de respiración consciente' },
+    { name: 'Escribir un pensamiento en el diario' },
+    { name: 'Leer 10 páginas de un libro' },
+];
 
 export type Book = {
   id: string;

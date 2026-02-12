@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { JournalEntry } from '@/lib/data';
 import type { AnalyzeJournalEntryOutput } from '@/ai/flows/analyze-journal-entry';
 import { useToast } from '@/hooks/use-toast';
-import { useUser } from './use-user';
+import { useUser } from '@/firebase';
 
 interface JournalContextType {
   entries: JournalEntry[];
@@ -13,17 +13,17 @@ interface JournalContextType {
 
 const JournalContext = createContext<JournalContextType | undefined>(undefined);
 
-const getStorageKey = (userEmail: string) => `umbral_journal_entries_${userEmail}`;
+const getStorageKey = (userId: string) => `umbral_journal_entries_${userId}`;
 
 export function JournalProvider({ children }: { children: React.ReactNode }) {
   const { toast } = useToast();
-  const { userEmail } = useUser();
+  const { user } = useUser();
   const [entries, setEntries] = useState<JournalEntry[]>([]);
 
   useEffect(() => {
-    if (userEmail) {
+    if (user) {
         try {
-            const storageKey = getStorageKey(userEmail);
+            const storageKey = getStorageKey(user.uid);
             const storedJson = localStorage.getItem(storageKey);
             if (storedJson) {
                 setEntries(JSON.parse(storedJson));
@@ -37,18 +37,18 @@ export function JournalProvider({ children }: { children: React.ReactNode }) {
     } else {
         setEntries([]);
     }
-  }, [userEmail]);
+  }, [user]);
 
   useEffect(() => {
-    if (userEmail) {
+    if (user) {
         try {
-            const storageKey = getStorageKey(userEmail);
+            const storageKey = getStorageKey(user.uid);
             localStorage.setItem(storageKey, JSON.stringify(entries));
         } catch (error) {
             console.error("Error saving journal entries to localStorage", error);
         }
     }
-  }, [entries, userEmail]);
+  }, [entries, user]);
 
   const addJournalEntry = (content: string, analysis: AnalyzeJournalEntryOutput) => {
     const newEntry: JournalEntry = {

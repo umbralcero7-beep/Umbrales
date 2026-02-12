@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { useUser } from '@/hooks/use-user';
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { doc, updateDoc } from 'firebase/firestore';
 
 const nameSchema = z.object({
   name: z.string().min(2, { message: 'Tu nombre debe tener al menos 2 caracteres.' }),
@@ -16,7 +17,11 @@ const nameSchema = z.object({
 
 export function NameForm() {
   const { toast } = useToast();
-  const { userEmail } = useUser();
+  const { user } = useUser();
+  const firestore = useFirestore();
+
+  const userDocRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
+  const { data: userProfile } = useDoc<{username: string}>(userDocRef);
   
   const form = useForm<z.infer<typeof nameSchema>>({
     resolver: zodResolver(nameSchema),
@@ -24,25 +29,28 @@ export function NameForm() {
   });
 
   useEffect(() => {
-    if (userEmail) {
-        const userKey = `userName_${userEmail}`;
-        const storedName = localStorage.getItem(userKey);
-        if (storedName) {
-            form.setValue('name', storedName);
-        }
+    if (userProfile?.username) {
+        form.setValue('name', userProfile.username);
     }
-  }, [form, userEmail]);
+  }, [form, userProfile]);
 
-  function onSubmit(values: z.infer<typeof nameSchema>) {
-    if (userEmail) {
-        const userKey = `userName_${userEmail}`;
-        localStorage.setItem(userKey, values.name);
-        // Dispatch a custom event to notify other components like UserNav
-        window.dispatchEvent(new StorageEvent('storage', { key: userKey }));
+  async function onSubmit(values: z.infer<typeof nameSchema>) {
+    if (user) {
+      const userRef = doc(firestore, "users", user.uid);
+      try {
+        await updateDoc(userRef, { username: values.name });
         toast({
           title: 'Nombre Actualizado',
           description: 'Tu nombre ha sido cambiado exitosamente.',
         });
+      } catch (error) {
+        console.error("Failed to update name:", error);
+        toast({
+          variant: "destructive",
+          title: 'Error',
+          description: 'No se pudo actualizar tu nombre. Inténtalo de nuevo.',
+        });
+      }
     }
   }
 
@@ -62,7 +70,7 @@ export function NameForm() {
             </FormItem>
           )}
         />
-        <Button type="submit" disabled={!userEmail}>Guardar Nombre</Button>
+        <Button type="submit" disabled={!user}>Guardar Nombre</Button>
       </form>
     </Form>
   );

@@ -1,0 +1,211 @@
+/**
+ * Core Philosophy: This ruleset enforces a strict user-ownership model. All user-generated content
+ * is stored in subcollections under that user's unique ID (`/users/{userId}`). Access to this data
+ * is restricted to the authenticated owner of that data tree. This ensures strong data privacy
+ * and prevents users from accessing each other's sensitive information.
+ *
+ * Data Structure:
+ * - /users/{userId}/...: All private, user-specific data (profiles, mood logs, journals, habits).
+ * - /emotionalLibraryItems/{itemId}: Global, read-only content for all signed-in users.
+ * - /achievements/{achievementId}: Global, read-only achievements for all signed-in users.
+ * - /roles_admin/{userId}: A special collection to manage admin roles for writing to global collections.
+ *
+ * Key Security Decisions:
+ * - Strict Ownership: A user can only read or write data within their own `/users/{userId}` path.
+ * - No User Listing: It is not possible to query the top-level `/users` collection, protecting user privacy.
+ * - Admin-Managed Content: Global collections like `emotionalLibraryItems` and `achievements`
+ *   are publicly readable by any authenticated user but can only be modified by users designated
+ *   as administrators in the `/roles_admin` collection.
+ * - Relational Integrity: On creation, documents in user subcollections must contain a `userId`
+ *   field that matches the `userId` in the path, ensuring data consistency. This field is immutable.
+ *
+ * Denormalization for Authorization: The rules rely on path-based ownership (`/users/{userId}`).
+ * For authorization-critical fields within documents (e.g., `userId`), rules validate that this
+ * denormalized data is correct upon creation and immutable upon update, avoiding complex and
+ * costly cross-document reads.
+ *
+ * Structural Segregation: User-private data is strictly separated from global public data by
+ * placing them in different root collections (`/users` vs. `/emotionalLibraryItems`). This creates
+ * a clear and secure boundary for applying different security postures.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions for readable, reusable logic
+    // =================================================
+
+    /**
+     * Checks if the user is authenticated.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * Checks if the request's authenticated user ID matches the provided userId.
+     * This is the core of the ownership model.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * Ensures an update or delete operation targets an existing document and is performed by the owner.
+     * Prevents modifying or deleting non-existent data.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+
+    /**
+     * Checks if the requesting user has an admin role.
+     * Admin status is granted by the existence of a document in the /roles_admin collection.
+     */
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
+    }
+
+    // Collection Rules
+    // =================================================
+
+    /**
+     * @description A user's own profile document.
+     * @path /users/{userId}
+     * @allow (create) An authenticated user creating their own profile document for the first time.
+     * @deny (get) An authenticated user trying to read another user's profile.
+     * @principle A user can create their own root document, and only they can manage it thereafter.
+     */
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false; // Disallow listing all users for privacy.
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description A user's private mood logs.
+     * @path /users/{userId}/moodLogs/{moodLogId}
+     * @allow (create) The user `user123` creating a new mood log under their own path `/users/user123/moodLogs/log456`.
+     * @deny (update) The user `user789` trying to update a mood log under `/users/user123/moodLogs/log456`.
+     * @principle Enforces strict ownership of all data within a user's private data tree.
+     */
+    match /users/{userId}/moodLogs/{moodLogId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId) && request.resource.data.userId == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description A user's private journal entries.
+     * @path /users/{userId}/journalEntries/{journalEntryId}
+     * @allow (get) The user `user123` reading their own journal entry at `/users/user123/journalEntries/entry456`.
+     * @deny (list) The user `user789` trying to list journal entries under `/users/user123/journalEntries`.
+     * @principle Enforces strict ownership of all data within a user's private data tree.
+     */
+    match /users/{userId}/journalEntries/{journalEntryId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId) && request.resource.data.userId == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description A user's private habits.
+     * @path /users/{userId}/habits/{habitId}
+     * @allow (delete) The user `user123` deleting their own habit at `/users/user123/habits/habit456`.
+     * @deny (create) An unauthenticated user trying to create a habit.
+     * @principle Enforces strict ownership of all data within a user's private data tree.
+     */
+    match /users/{userId}/habits/{habitId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId) && request.resource.data.userId == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
+      allow delete: if isExistingOwner(userId);
+    }
+    
+    /**
+     * @description Completion records for a user's habit.
+     * @path /users/{userId}/habitCompletions/{completionId}
+     * @allow (create) The user `user123` creating a completion record for their habit.
+     * @deny (get) The user `user789` trying to read a completion record for `user123`'s habit.
+     * @principle Restricts access to a user's own data, even in deeply nested subcollections.
+     */
+    match /users/{userId}/habitCompletions/{completionId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId) && request.resource.data.userId == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description A user's saved items from the emotional library.
+     * @path /users/{userId}/libraryItems/{libraryItemId}
+     * @allow (get) The user `user123` fetching their saved library item status.
+     * @deny (update) The user `user789` trying to update the status of `user123`'s saved item.
+     * @principle Enforces strict ownership of all data within a user's private data tree.
+     */
+    match /users/{userId}/libraryItems/{libraryItemId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId) && request.resource.data.userId == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description A user's earned achievements.
+     * @path /users/{userId}/achievements/{userAchievementId}
+     * @allow (list) The user `user123` listing all their earned achievements.
+     * @deny (create) The user `user789` trying to grant an achievement to `user123`.
+     * @principle Enforces strict ownership of all data within a user's private data tree.
+     */
+    match /users/{userId}/achievements/{userAchievementId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId) && request.resource.data.userId == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Global emotional library content, readable by all users but writable only by admins.
+     * @path /emotionalLibraryItems/{libraryItemId}
+     * @allow (get) Any signed-in user reading a library item.
+     * @deny (create) A regular, non-admin user trying to add a new library item.
+     * @principle Secures global, shared data by allowing public reads and restricting writes to privileged roles.
+     */
+    match /emotionalLibraryItems/{libraryItemId} {
+      allow get, list: if isSignedIn();
+      allow create: if isAdmin();
+      allow update: if isAdmin() && resource != null;
+      allow delete: if isAdmin() && resource != null;
+    }
+
+    /**
+     * @description Global achievement definitions, readable by all users but writable only by admins.
+     * @path /achievements/{achievementId}
+     * @allow (list) Any signed-in user listing all available achievements.
+     * @deny (update) A regular, non-admin user trying to modify an achievement's description.
+     * @principle Secures global, shared data by allowing public reads and restricting writes to privileged roles.
+     */
+    match /achievements/{achievementId} {
+      allow get, list: if isSignedIn();
+      allow create: if isAdmin();
+      allow update: if isAdmin() && resource != null;
+      allow delete: if isAdmin() && resource != null;
+    }
+
+    /**
+     * @description Admin role management collection. Only other admins can manage this collection.
+     * @path /roles_admin/{userId}
+     * @allow (get) An admin checking if another user is also an admin.
+     * @deny (create) A non-admin user trying to grant themselves admin privileges.
+     * @principle Protects the integrity of the role-based access control system itself.
+     */
+    match /roles_admin/{userId} {
+      allow get, list: if isAdmin();
+      allow create, update, delete: if isAdmin();
+    }
+  }
+}

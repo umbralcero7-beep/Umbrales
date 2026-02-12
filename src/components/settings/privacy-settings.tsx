@@ -14,19 +14,26 @@ import {
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/firebase";
+import { deleteUser } from "firebase/auth";
 
 export function PrivacySettings() {
     const { toast } = useToast();
     const router = useRouter();
+    const auth = useAuth();
 
     const handleExport = () => {
         // In a real app, this would fetch data from a backend.
         // Here, we simulate it with localStorage data.
+        const user = auth.currentUser;
+        if (!user) {
+            toast({ variant: "destructive", title: "Error", description: "Debes iniciar sesión para exportar datos." });
+            return;
+        }
+
         const dataToExport = {
-            userName: localStorage.getItem('userName'),
-            habits: JSON.parse(localStorage.getItem('umbral_habits') || '[]'),
-            // We can't export journal entries as they are not persisted.
-            journalEntries: "No exportable en esta versión de demostración."
+            habits: JSON.parse(localStorage.getItem(`umbral_habits_v2_${user.uid}`) || '[]'),
+            journal: JSON.parse(localStorage.getItem(`umbral_journal_entries_${user.uid}`) || '[]'),
         };
 
         const dataStr = JSON.stringify(dataToExport, null, 2);
@@ -45,15 +52,28 @@ export function PrivacySettings() {
         });
     }
 
-    const handleDeleteAccount = () => {
-        // In a real app, this would call a backend endpoint to delete the user.
-        // Here, we just clear localStorage and redirect.
-        localStorage.clear();
-        toast({
-            title: "Cuenta Eliminada",
-            description: "Tus datos locales han sido borrados. Serás redirigido.",
-        });
-        router.push('/');
+    const handleDeleteAccount = async () => {
+        const user = auth.currentUser;
+        if (!user) {
+            toast({ variant: "destructive", title: "Error", description: "No hay ninguna cuenta para eliminar." });
+            return;
+        }
+
+        try {
+            await deleteUser(user);
+            toast({
+                title: "Cuenta Eliminada",
+                description: "Tu cuenta ha sido eliminada permanentemente. Serás redirigido.",
+            });
+            // The onAuthStateChanged listener in FirebaseProvider will handle the redirect.
+        } catch (error) {
+            console.error("Failed to delete user:", error);
+            toast({
+                variant: "destructive",
+                title: "Error al eliminar la cuenta",
+                description: "Por favor, cierra sesión y vuelve a iniciarla antes de intentar eliminar tu cuenta.",
+            });
+        }
     }
 
     return (
@@ -74,7 +94,7 @@ export function PrivacySettings() {
                         <AlertDialogHeader>
                         <AlertDialogTitle>¿Estás absolutamente seguro?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Esta acción no se puede deshacer. Esto eliminará permanentemente tu cuenta y borrará todos tus datos de nuestros servidores.
+                            Esta acción no se puede deshacer. Esto eliminará permanentemente tu cuenta y tus datos de Firebase. Los datos locales del navegador también se volverán inaccesibles.
                         </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
