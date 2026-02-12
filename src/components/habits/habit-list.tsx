@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Button } from '../ui/button';
-import { ListChecks, Plus, Clock, BellOff } from 'lucide-react';
+import { ListChecks, Plus, Clock, BellOff, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
     Dialog,
@@ -18,9 +18,9 @@ import {
   } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useHabits } from '@/hooks/use-habits';
-import type { Habit } from '@/lib/data';
+import type { DisplayHabit } from '@/hooks/use-habits';
 
-function ReminderDialog({ habit }: { habit: Habit }) {
+function ReminderDialog({ habit }: { habit: DisplayHabit }) {
     const { setHabitReminder } = useHabits();
     const [time, setTime] = useState(habit.reminderTime || "09:00");
 
@@ -75,7 +75,7 @@ function ReminderDialog({ habit }: { habit: Habit }) {
 }
 
 export function HabitList() {
-  const { habits, toggleHabit, addHabit } = useHabits();
+  const { habits, toggleHabit, addHabit, isLoading } = useHabits();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newHabitName, setNewHabitName] = useState("");
 
@@ -92,6 +92,15 @@ export function HabitList() {
     if (!open) {
       setNewHabitName("");
     }
+  }
+
+  if (isLoading) {
+    return (
+        <div className="text-center py-10">
+            <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+            <p className="mt-4 text-sm text-muted-foreground">Cargando tus hábitos...</p>
+        </div>
+    );
   }
 
   return (

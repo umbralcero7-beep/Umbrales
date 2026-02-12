@@ -12,7 +12,7 @@ import {
   setDocumentNonBlocking, 
   deleteDocumentNonBlocking 
 } from '@/firebase';
-import { collection, doc, query, where, getDocs, writeBatch } from 'firebase/firestore';
+import { collection, doc, writeBatch } from 'firebase/firestore';
 import { Capacitor } from '@capacitor/core';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { initialHabitsData } from '@/lib/data';
@@ -75,7 +75,8 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
       console.log('No habits found for user, seeding initial data...');
       const batch = writeBatch(firestore);
       initialHabitsData.forEach(habitData => {
-        const habitId = `habit-${Date.now()}-${Math.random()}`;
+        // Use a more robust random ID generation
+        const habitId = doc(collection(firestore, 'temp')).id;
         const newHabitRef = doc(firestore, 'users', user.uid, 'habits', habitId);
         batch.set(newHabitRef, {
           userId: user.uid,
@@ -169,10 +170,8 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
 
     if (Capacitor.isNativePlatform()) {
         try {
-            const notificationIdStr = habit.id.replace(/[^0-9]/g, '').substring(0, 9);
-            const notificationId = parseInt(notificationIdStr, 10);
-            
-            await PushNotifications.cancel({ notifications: [{ id: notificationId }] }).catch(e => console.warn("Could not cancel notifications.", e));
+            // Cancel any existing notification for this habit
+            await PushNotifications.cancel({ notifications: [{ id: habit.id }] }).catch(e => console.warn("Could not cancel notifications.", e));
 
             if (time) {
                 const [hour, minute] = time.split(':').map(Number);
@@ -185,13 +184,17 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
                 
                 await PushNotifications.schedule({
                     notifications: [{
-                        id: notificationId,
+                        id: habit.id, // Use the stable Firestore document ID
                         channelId: 'habit_reminders',
                         title: 'Recordatorio de Hábito',
                         body: `Es hora de tu hábito: "${habit.name}"`,
                         schedule: { on: { hour, minute }, repeats: true },
                         smallIcon: 'ic_stat_icon_name',
                         largeIcon: 'ic_launcher',
+                        // The URL to open when the notification is tapped
+                        extra: {
+                          url: '/dashboard/habits'
+                        }
                     }]
                 });
 

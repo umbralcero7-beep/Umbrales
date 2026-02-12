@@ -39,14 +39,14 @@ export function HabitConsistencyChart() {
 
         if (totalPossibleCompletions === 0) {
             return [
-                { name: 'Completados', habits: 0, fill: 'hsl(var(--chart-2))' },
-                { name: 'Pendientes', habits: 1, fill: 'hsl(var(--destructive))' },
+                { name: 'Completados', value: 0, fill: 'hsl(var(--chart-2))' },
+                { name: 'Pendientes', value: 1, fill: 'hsl(var(--destructive))' },
             ]
         }
 
         return [
-            { name: 'Completados', habits: totalCompletions, fill: 'hsl(var(--chart-2))' },
-            { name: 'Pendientes', habits: pending > 0 ? pending : 0, fill: 'hsl(var(--destructive))' },
+            { name: 'Completados', value: totalCompletions, fill: 'hsl(var(--chart-2))' },
+            { name: 'Pendientes', value: pending > 0 ? pending : 0, fill: 'hsl(var(--destructive))' },
         ];
     }, [habits, history]);
 
@@ -60,7 +60,7 @@ export function HabitConsistencyChart() {
                     labelLine={false}
                     label={renderCustomizedLabel}
                     outerRadius={100}
-                    dataKey="habits"
+                    dataKey="value"
                     nameKey="name"
                     strokeWidth={2}
                 >
