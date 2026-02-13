@@ -8,11 +8,10 @@ import {
   useCollection, 
   useMemoFirebase, 
   addDocumentNonBlocking, 
-  updateDocumentNonBlocking, 
   setDocumentNonBlocking, 
   deleteDocumentNonBlocking 
 } from '@/firebase';
-import { collection, doc, writeBatch } from 'firebase/firestore';
+import { collection, doc, writeBatch, updateDoc } from 'firebase/firestore';
 import { Capacitor } from '@capacitor/core';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { initialHabitsData } from '@/lib/data';
@@ -50,6 +49,7 @@ interface HabitsContextType {
   addHabit: (habitName: string) => void;
   toggleHabit: (id: string) => void;
   setHabitReminder: (id: string, time: string | null) => void;
+  importHabits: (habitsToImport: { name: string }[]) => void;
 }
 
 const HabitsContext = createContext<HabitsContextType | undefined>(undefined);
@@ -134,6 +134,46 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
+  const importHabits = (habitsToImport: { name: string }[]) => {
+    if (!user || !firestore) return;
+    if (habitsToImport.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "Archivo vacío o formato incorrecto",
+        description: "Asegúrate de que el archivo CSV tenga un encabezado y al menos una fila.",
+      });
+      return;
+    }
+
+    const batch = writeBatch(firestore);
+    const habitsCollectionRefForBatch = collection(firestore, 'users', user.uid, 'habits');
+
+    habitsToImport.forEach(habit => {
+      if (habit.name.trim() !== "") {
+        const newHabitRef = doc(habitsCollectionRefForBatch);
+        batch.set(newHabitRef, {
+          userId: user.uid,
+          name: habit.name.trim(),
+          createdAt: Date.now(),
+        });
+      }
+    });
+
+    batch.commit().then(() => {
+      toast({
+        title: "¡Importación Exitosa!",
+        description: `Se han importado ${habitsToImport.length} hábitos.`,
+      });
+    }).catch(err => {
+      console.error("Error importando hábitos:", err);
+      toast({
+        variant: "destructive",
+        title: "Error en la importación",
+        description: "No se pudieron guardar los hábitos. Inténtalo de nuevo.",
+      });
+    });
+  };
+
   const toggleHabit = (habitId: string) => {
     if (!user) return;
     const today = getTodayDateString();
@@ -166,57 +206,77 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
     if (!habit) return;
 
     const habitDocRef = doc(firestore, 'users', user.uid, 'habits', habitId);
-    updateDocumentNonBlocking(habitDocRef, { reminderTime: time });
-
+    
+    // --- NATIVE MOBILE LOGIC ---
     if (Capacitor.isNativePlatform()) {
-        try {
-            // Cancel any existing notification for this habit
-            await PushNotifications.cancel({ notifications: [{ id: habit.id }] }).catch(e => console.warn("Could not cancel notifications.", e));
-
-            if (time) {
-                const [hour, minute] = time.split(':').map(Number);
-                await PushNotifications.createChannel({
-                    id: 'habit_reminders',
-                    name: 'Recordatorios de Hábitos',
-                    importance: 4,
-                    visibility: 1,
-                });
-                
-                await PushNotifications.schedule({
-                    notifications: [{
-                        id: habit.id, // Use the stable Firestore document ID
-                        channelId: 'habit_reminders',
-                        title: 'Recordatorio de Hábito',
-                        body: `Es hora de tu hábito: "${habit.name}"`,
-                        schedule: { on: { hour, minute }, repeats: true },
-                        smallIcon: 'ic_stat_icon_name',
-                        largeIcon: 'ic_launcher',
-                        // The URL to open when the notification is tapped
-                        extra: {
-                          url: '/dashboard/habits'
-                        }
-                    }]
-                });
-
-                toast({ title: 'Recordatorio Guardado', description: `Recibirás una notificación para "${habit.name}" a las ${time} en tu dispositivo.` });
-            } else {
-                 toast({ title: 'Recordatorio Eliminado', description: `Ya no se te recordará sobre "${habit.name}".` });
-            }
-        } catch (e) {
-            console.error("Error scheduling notification:", e);
-            toast({ variant: 'destructive', title: 'Error de Notificación', description: 'No se pudo programar el recordatorio.' });
-        }
-    } else {
+      try {
+        // 1. Check for permissions if we are SETTING a reminder
         if (time) {
-            toast({ title: 'Recordatorio Guardado', description: `Has guardado el recordatorio para "${habit.name}" a las ${time}.` });
-        } else {
-            toast({ title: 'Recordatorio Eliminado' });
+          let permStatus = await PushNotifications.checkPermissions();
+
+          if (permStatus.receive === 'prompt' || permStatus.receive === 'prompt-with-rationale') {
+            permStatus = await PushNotifications.requestPermissions();
+          }
+
+          if (permStatus.receive !== 'granted') {
+            toast({
+              variant: 'destructive',
+              title: 'Permiso Requerido',
+              description: 'No se pueden programar recordatorios sin permiso para notificaciones.',
+            });
+            return; // Stop if permission is denied
+          }
         }
+        
+        // 2. Update Firestore (now blocking to ensure consistency)
+        await updateDoc(habitDocRef, { reminderTime: time });
+
+        // 3. Manage device notifications
+        await PushNotifications.cancel({ notifications: [{ id: habit.id }] }).catch(e => console.warn("Could not cancel notifications.", e));
+
+        if (time) {
+          const [hour, minute] = time.split(':').map(Number);
+          await PushNotifications.createChannel({
+            id: 'habit_reminders',
+            name: 'Recordatorios de Hábitos',
+            importance: 4,
+            visibility: 1,
+          });
+          
+          await PushNotifications.schedule({
+            notifications: [{
+              id: habit.id,
+              channelId: 'habit_reminders',
+              title: 'Recordatorio de Hábito',
+              body: `Es hora de tu hábito: "${habit.name}"`,
+              schedule: { on: { hour, minute }, repeats: true },
+              smallIcon: 'ic_stat_icon_name',
+              largeIcon: 'ic_launcher',
+              extra: { url: '/dashboard/habits' }
+            }]
+          });
+
+          toast({ title: 'Recordatorio Guardado', description: `Recibirás una notificación para "${habit.name}" a las ${time} en tu dispositivo.` });
+        } else {
+          toast({ title: 'Recordatorio Eliminado', description: `Ya no se te recordará sobre "${habit.name}".` });
+        }
+      } catch (e) {
+        console.error("Error handling reminder:", e);
+        toast({ variant: 'destructive', title: 'Error de Notificación', description: 'No se pudo programar el recordatorio.' });
+      }
+    } else {
+      // --- BROWSER LOGIC (no change) ---
+      await updateDoc(habitDocRef, { reminderTime: time });
+      if (time) {
+        toast({ title: 'Recordatorio Guardado', description: `Has guardado el recordatorio para "${habit.name}" a las ${time}.` });
+      } else {
+        toast({ title: 'Recordatorio Eliminado' });
+      }
     }
   };
 
   return (
-    <HabitsContext.Provider value={{ habits, history, isLoading: isLoadingHabits || isLoadingCompletions, addHabit, toggleHabit, setHabitReminder }}>
+    <HabitsContext.Provider value={{ habits, history, isLoading: isLoadingHabits || isLoadingCompletions, addHabit, toggleHabit, setHabitReminder, importHabits }}>
       {children}
     </HabitsContext.Provider>
   );

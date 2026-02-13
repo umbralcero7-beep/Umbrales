@@ -20,7 +20,9 @@ import {
                         Sigue tus hábitos diarios para construir una mejor rutina.
                     </CardDescription>
                 </div>
-                <HabitSuggestions />
+                <div className="flex items-center gap-2">
+                    <HabitSuggestions />
+                </div>
             </div>
           </CardHeader>
           <CardContent>
