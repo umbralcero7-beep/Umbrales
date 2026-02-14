@@ -4,13 +4,13 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { type Book } from '@/lib/data';
+import { type Book, moodData } from '@/lib/data';
 import { Button } from '@/components/ui/button';
-import { Loader2, AlertTriangle, ChevronLeft, Gem } from 'lucide-react';
+import { Loader2, AlertTriangle, ChevronLeft, Gem, Clock5, Clock10 } from 'lucide-react';
 import { Card, CardTitle, CardDescription } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-import { extractBookPassage } from '@/ai/flows/extract-book-passage';
+import { extractReadingForMood } from '@/ai/flows/extract-reading-for-mood';
 
 type ReadBookClientProps = {
   book: Book | undefined;
@@ -21,14 +21,21 @@ export function ReadBookClient({ book }: ReadBookClientProps) {
   const { toast } = useToast();
   
   const [passage, setPassage] = useState<string | null>(null);
-  const [isPassageLoading, setIsPassageLoading] = useState(false);
+  const [loadingDuration, setLoadingDuration] = useState<5 | 15 | null>(null);
 
-  const handleGetPassage = async () => {
+  const handleGetPassage = async (duration: 5 | 15) => {
     if (!book) return;
-    setIsPassageLoading(true);
+    setLoadingDuration(duration);
     setPassage(null);
+
+    const latestMood = moodData[moodData.length - 1]?.mood || 'neutral';
+
     try {
-      const result = await extractBookPassage({ bookTitle: book.title });
+      const result = await extractReadingForMood({ 
+        bookTitle: book.title,
+        mood: latestMood,
+        duration: duration
+      });
       setPassage(result.passage);
     } catch (error) {
       console.error("Error extracting passage:", error);
@@ -38,7 +45,7 @@ export function ReadBookClient({ book }: ReadBookClientProps) {
         description: "No se pudo obtener un pasaje en este momento. Por favor, inténtalo de nuevo más tarde.",
       });
     } finally {
-      setIsPassageLoading(false);
+      setLoadingDuration(null);
     }
   };
 
@@ -56,6 +63,8 @@ export function ReadBookClient({ book }: ReadBookClientProps) {
       </div>
     );
   }
+  
+  const isPassageLoading = loadingDuration !== null;
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -79,31 +88,44 @@ export function ReadBookClient({ book }: ReadBookClientProps) {
                     <CardDescription>{book.author}</CardDescription>
                 </div>
                 <div className="md:col-span-2 p-6 bg-muted/30 rounded-r-lg">
-                    <h2 className="text-xl font-bold font-headline mb-4 flex items-center gap-2"><Gem/> Tu Espacio de Lectura</h2>
+                    <h2 className="text-xl font-bold font-headline mb-2 flex items-center gap-2"><Gem/> Tu Espacio de Lectura</h2>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Cero puede extraer un pasaje de este libro adaptado a tu estado de ánimo registrado.
+                    </p>
                     
                     <ScrollArea className="h-[50vh] pr-4">
                         {isPassageLoading ? (
                             <div className="flex flex-col items-center justify-center text-center h-full p-8">
                                 <Loader2 className="h-8 w-8 text-primary animate-spin mb-4" />
-                                <p className="text-muted-foreground">Cero está buscando la mejor lectura para tu estado de ánimo...</p>
+                                <p className="text-muted-foreground">Cero está buscando la mejor lectura para tu momento...</p>
                             </div>
                         ) : passage ? (
                             <p className="whitespace-pre-line text-muted-foreground leading-relaxed">
                                 {passage}
                             </p>
                         ) : (
-                            <div className="flex flex-col items-center justify-center text-center h-full border-2 border-dashed rounded-lg p-8">
-                                <Gem className="h-10 w-10 text-primary mb-4" />
+                            <div className="flex flex-col items-center justify-center text-center h-full border-2 border-dashed rounded-lg p-8 space-y-4">
+                                <Gem className="h-10 w-10 text-primary" />
                                 <h3 className="font-semibold text-lg">¿Listo para una dosis de sabiduría?</h3>
-                                <p className="text-muted-foreground mb-4">Cero puede extraer una "pepita de oro" (un pasaje clave) de este libro para ti.</p>
-                                <Button onClick={handleGetPassage} disabled={isPassageLoading}>
-                                    {isPassageLoading ? (
-                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    ) : (
-                                        <Gem className="mr-2 h-4 w-4" />
-                                    )}
-                                    Buscar Pepita de Oro
-                                </Button>
+                                <p className="text-muted-foreground">Elige la duración de tu lectura:</p>
+                                <div className="flex gap-4">
+                                    <Button onClick={() => handleGetPassage(5)} disabled={isPassageLoading}>
+                                        {loadingDuration === 5 ? (
+                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                        ) : (
+                                            <Clock5 className="mr-2 h-4 w-4" />
+                                        )}
+                                        Lectura de 5 min
+                                    </Button>
+                                    <Button onClick={() => handleGetPassage(15)} disabled={isPassageLoading}>
+                                         {loadingDuration === 15 ? (
+                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                        ) : (
+                                            <Clock10 className="mr-2 h-4 w-4" />
+                                        )}
+                                        Lectura de 15 min
+                                    </Button>
+                                </div>
                             </div>
                         )}
                     </ScrollArea>
