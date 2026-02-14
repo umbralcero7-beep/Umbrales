@@ -212,13 +212,18 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
       try {
         // 1. Check for permissions if we are SETTING a reminder
         if (time) {
+          console.log('Checking push notification permissions...');
           let permStatus = await PushNotifications.checkPermissions();
+          console.log('Initial permission status:', permStatus.receive);
 
           if (permStatus.receive === 'prompt' || permStatus.receive === 'prompt-with-rationale') {
+            console.log('Requesting push notification permissions...');
             permStatus = await PushNotifications.requestPermissions();
+            console.log('New permission status after request:', permStatus.receive);
           }
 
           if (permStatus.receive !== 'granted') {
+            console.error('Permission not granted. Status:', permStatus.receive);
             toast({
               variant: 'destructive',
               title: 'Permiso Requerido',
@@ -226,6 +231,7 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
             });
             return; // Stop if permission is denied
           }
+          console.log('Permissions are granted.');
         }
         
         // 2. Update Firestore (now blocking to ensure consistency)
@@ -233,6 +239,7 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
 
         // 3. Manage device notifications
         await PushNotifications.cancel({ notifications: [{ id: habit.id }] }).catch(e => console.warn("Could not cancel notifications.", e));
+        console.log(`Cancelled any existing notifications for habit ID: ${habit.id}`);
 
         if (time) {
           const [hour, minute] = time.split(':').map(Number);
@@ -243,6 +250,7 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
             visibility: 1,
           });
           
+          console.log(`Scheduling notification for habit "${habit.name}" at ${time}`);
           await PushNotifications.schedule({
             notifications: [{
               id: habit.id,
@@ -255,14 +263,16 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
               extra: { url: '/dashboard/habits' }
             }]
           });
+          console.log('Notification scheduled successfully.');
 
           toast({ title: 'Recordatorio Guardado', description: `Recibirás una notificación para "${habit.name}" a las ${time} en tu dispositivo.` });
         } else {
+          console.log('Reminder time is null, clearing notifications.');
           toast({ title: 'Recordatorio Eliminado', description: `Ya no se te recordará sobre "${habit.name}".` });
         }
-      } catch (e) {
-        console.error("Error handling reminder:", e);
-        toast({ variant: 'destructive', title: 'Error de Notificación', description: 'No se pudo programar el recordatorio.' });
+      } catch (e: any) {
+        console.error("Full error object in setHabitReminder:", e);
+        toast({ variant: 'destructive', title: 'Error de Notificación', description: `No se pudo programar el recordatorio. ${e.message}` });
       }
     } else {
       // --- BROWSER LOGIC (no change) ---
