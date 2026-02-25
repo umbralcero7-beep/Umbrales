@@ -22,6 +22,10 @@ import { Textarea } from '../ui/textarea';
 import { Label } from '../ui/label';
 import { Button } from '../ui/button';
 import { ScrollArea } from '../ui/scroll-area';
+import { useMood } from '@/hooks/use-mood';
+import { useJournal } from '@/hooks/use-journal';
+import { analyzeJournalEntry } from '@/ai/flows/analyze-journal-entry';
+
 
 const CeroIcon = ({ className }: { className?: string }) => (
     <div className={cn("relative text-primary", className)}>
@@ -74,6 +78,8 @@ export function MoodSelector() {
   const [step, setStep] = useState<'write' | 'advice'>('write');
   const [journalText, setJournalText] = useState('');
   const { toast } = useToast();
+  const { addMoodLog } = useMood();
+  const { addJournalEntry } = useJournal();
   
   const [selectedBookTitle, setSelectedBookTitle] = useState<string | null>(null);
   const [isReadingDialogOpen, setIsReadingDialogOpen] = useState(false);
@@ -92,13 +98,17 @@ export function MoodSelector() {
   const handleContinueFromWriting = async () => {
     if (!selectedMood) return;
 
+    addMoodLog(selectedMood);
+
     if (journalText.trim().length > 10) {
-      // Here you would typically save the entry to your backend
-      console.log("Journal entry to save:", journalText);
-      toast({
-        title: "Entrada de diario guardada",
-        description: "Tus pensamientos han sido registrados.",
-      });
+      try {
+        const name = localStorage.getItem('userName') || 'tú';
+        const analysis = await analyzeJournalEntry({ entryText: journalText, userName: name });
+        addJournalEntry(journalText, analysis);
+      } catch (e) {
+        console.error("Could not analyze/save journal note:", e);
+        toast({ variant: 'destructive', title: 'Error al guardar nota' });
+      }
     }
 
     setStep('advice');
@@ -135,7 +145,7 @@ export function MoodSelector() {
     setReadingPassage(null);
 
     try {
-      const { passage } = await extractReadingForMood({ mood: selectedMood, bookTitle: selectedBookTitle });
+      const { passage } = await extractReadingForMood({ mood: selectedMood, bookTitle: selectedBookTitle, duration: 5 });
       setReadingPassage(passage);
     } catch (error: any) {
       if (error?.message?.includes('429')) {
@@ -165,8 +175,9 @@ export function MoodSelector() {
       setSelectedMood(null);
       setStep('write');
       setJournalText('');
-      setSelectedBookTitle(null);
+      setAdvice(null);
       setError(null);
+      setSelectedBookTitle(null);
     }
   }
 
@@ -216,8 +227,10 @@ export function MoodSelector() {
                 />
               </div>
               <AlertDialogFooter>
-                <AlertDialogCancel>Omitir</AlertDialogCancel>
-                <AlertDialogAction onClick={handleContinueFromWriting}>Continuar</AlertDialogAction>
+                <AlertDialogCancel>Cerrar</AlertDialogCancel>
+                <AlertDialogAction onClick={handleContinueFromWriting}>
+                    {journalText.trim().length > 10 ? 'Guardar y Continuar' : 'Continuar'}
+                </AlertDialogAction>
               </AlertDialogFooter>
             </>
           ) : (

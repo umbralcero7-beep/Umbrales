@@ -4,17 +4,20 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertTriangle, Sparkles } from "lucide-react";
-import { moodData } from "@/lib/data";
+import { useMood } from "@/hooks/use-mood";
 import { analyzeMoodPatterns } from "@/ai/flows/analyze-mood-patterns";
+import { format, subDays } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 export function MoodAnalysis() {
   const [analysis, setAnalysis] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { moods: moodHistory } = useMood();
 
   useEffect(() => {
     async function getAnalysis() {
-      if (moodData.length === 0) {
+      if (moodHistory.length === 0) {
         setAnalysis("Registra tu estado de ánimo durante unos días para que Cero pueda darte un análisis personalizado.");
         setLoading(false);
         return;
@@ -23,7 +26,13 @@ export function MoodAnalysis() {
       setLoading(true);
       setError(null);
       try {
-        const result = await analyzeMoodPatterns({ moodHistory: moodData });
+        const last7Days = moodHistory.slice(-7);
+        const formattedHistory = last7Days.map(log => ({
+            date: format(new Date(log.date), "eeee", { locale: es }),
+            mood: log.mood
+        }));
+        
+        const result = await analyzeMoodPatterns({ moodHistory: formattedHistory });
         setAnalysis(result.analysis);
       } catch (error: any) {
         let userMessage = "No se pudo obtener el análisis en este momento.";
@@ -38,7 +47,7 @@ export function MoodAnalysis() {
     }
     
     getAnalysis();
-  }, []);
+  }, [moodHistory]);
 
   return (
     <Card>

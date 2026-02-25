@@ -4,13 +4,14 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { type Book, moodData } from '@/lib/data';
+import { type Book } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import { Loader2, AlertTriangle, ChevronLeft, Gem, Clock5, Clock10 } from 'lucide-react';
 import { Card, CardTitle, CardDescription } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { extractReadingForMood } from '@/ai/flows/extract-reading-for-mood';
+import { useMood } from '@/hooks/use-mood';
 
 type ReadBookClientProps = {
   book: Book | undefined;
@@ -19,6 +20,7 @@ type ReadBookClientProps = {
 export function ReadBookClient({ book }: ReadBookClientProps) {
   const router = useRouter();
   const { toast } = useToast();
+  const { moods } = useMood();
   
   const [passage, setPassage] = useState<string | null>(null);
   const [loadingDuration, setLoadingDuration] = useState<5 | 15 | null>(null);
@@ -28,7 +30,7 @@ export function ReadBookClient({ book }: ReadBookClientProps) {
     setLoadingDuration(duration);
     setPassage(null);
 
-    const latestMood = moodData[moodData.length - 1]?.mood || 'neutral';
+    const latestMood = moods.length > 0 ? moods[moods.length - 1].mood : 'neutral';
 
     try {
       const result = await extractReadingForMood({ 

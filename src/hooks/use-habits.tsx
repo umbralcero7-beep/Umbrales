@@ -13,7 +13,6 @@ import {
 } from '@/firebase';
 import { collection, doc, writeBatch, updateDoc } from 'firebase/firestore';
 import { Capacitor } from '@capacitor/core';
-import { PushNotifications } from '@capacitor/push-notifications';
 import { initialHabitsData } from '@/lib/data';
 
 // Habit structure in Firestore
@@ -204,95 +203,105 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
     if (!user) return;
     const habit = habits.find(h => h.id === habitId);
     if (!habit) return;
-
+  
     const habitDocRef = doc(firestore, 'users', user.uid, 'habits', habitId);
-    
-    if (Capacitor.isNativePlatform()) {
-      if (!Capacitor.isPluginAvailable('PushNotifications')) {
-        const errorMessage = 'El plugin PushNotifications no está implementado. Ejecuta "npx cap sync" y reconstruye la app.';
-        console.error("PushNotifications plugin is not available. Did you run 'npx cap sync'?");
-        toast({
-            variant: 'destructive',
-            title: 'Error de Notificación',
-            description: errorMessage,
-        });
-        return;
-      }
-      
-      try {
-        if (time) {
-          console.log('Checking push notification permissions...');
-          let permStatus = await PushNotifications.checkPermissions();
-          console.log('Initial permission status:', permStatus.receive);
-
-          if (permStatus.receive === 'prompt' || permStatus.receive === 'prompt-with-rationale') {
-            console.log('Requesting push notification permissions...');
-            permStatus = await PushNotifications.requestPermissions();
-            console.log('New permission status after request:', permStatus.receive);
-          }
-
-          if (permStatus.receive !== 'granted') {
-            console.error('Permission not granted. Status:', permStatus.receive);
-            toast({
-              variant: 'destructive',
-              title: 'Permiso Requerido',
-              description: 'No se pueden programar recordatorios sin permiso para notificaciones.',
-            });
-            return;
-          }
-          console.log('Permissions are granted.');
-        }
-        
-        await updateDoc(habitDocRef, { reminderTime: time });
-
-        await PushNotifications.cancel({ notifications: [{ id: habit.id }] }).catch(e => console.warn("Could not cancel notifications.", e));
-        console.log(`Cancelled any existing notifications for habit ID: ${habit.id}`);
-
-        if (time) {
-          const [hour, minute] = time.split(':').map(Number);
-          await PushNotifications.createChannel({
-            id: 'habit_reminders',
-            name: 'Recordatorios de Hábitos',
-            importance: 4,
-            visibility: 1,
-          });
-          
-          console.log(`Scheduling notification for habit "${habit.name}" at ${time}`);
-          await PushNotifications.schedule({
-            notifications: [{
-              id: habit.id,
-              channelId: 'habit_reminders',
-              title: 'Recordatorio de Hábito',
-              body: `Es hora de tu hábito: "${habit.name}"`,
-              schedule: { on: { hour, minute }, repeats: true },
-              smallIcon: 'ic_stat_icon_name',
-              largeIcon: 'ic_launcher',
-              extra: { url: '/dashboard/habits' }
-            }]
-          });
-          console.log('Notification scheduled successfully.');
-
-          toast({ title: 'Recordatorio Guardado', description: `Recibirás una notificación para "${habit.name}" a las ${time} en tu dispositivo.` });
-        } else {
-          console.log('Reminder time is null, clearing notifications.');
-          toast({ title: 'Recordatorio Eliminado', description: `Ya no se te recordará sobre "${habit.name}".` });
-        }
-      } catch (e: any) {
-        console.error("Full error object in setHabitReminder:", e);
-        const errorMessage = e.message || 'Error desconocido al programar la notificación.';
-        toast({ 
-            variant: 'destructive', 
-            title: 'Error de Notificación', 
-            description: `No se pudo programar el recordatorio. ${errorMessage}` 
-        });
-      }
-    } else {
+  
+    // Only run this logic on native platforms
+    if (!Capacitor.isNativePlatform()) {
       await updateDoc(habitDocRef, { reminderTime: time });
       if (time) {
-        toast({ title: 'Recordatorio Guardado', description: `Has guardado el recordatorio para "${habit.name}" a las ${time}.` });
+        toast({ title: 'Recordatorio Guardado', description: `Recordatorio para "${habit.name}" a las ${time} (solo en la app móvil).` });
       } else {
         toast({ title: 'Recordatorio Eliminado' });
       }
+      return;
+    }
+  
+    // Check if the plugin is actually available
+    if (!Capacitor.isPluginAvailable('PushNotifications')) {
+      const errorMessage = 'El plugin PushNotifications no está implementado. Ejecuta "npm run build" y "npx cap sync" y reconstruye la app.';
+      console.error("PushNotifications plugin is not available. Did you run 'npm run build' and 'npx cap sync'?");
+      toast({
+        variant: 'destructive',
+        title: 'Error de Configuración',
+        description: errorMessage,
+      });
+      return;
+    }
+  
+    try {
+      const { PushNotifications } = await import('@capacitor/push-notifications');
+
+      // Request permissions ONLY if a time is being set
+      if (time) {
+        console.log('Checking push notification permissions...');
+        let permStatus = await PushNotifications.checkPermissions();
+        console.log('Initial permission status:', permStatus.receive);
+  
+        if (permStatus.receive === 'prompt' || permStatus.receive === 'prompt-with-rationale') {
+          console.log('Requesting push notification permissions...');
+          permStatus = await PushNotifications.requestPermissions();
+          console.log('New permission status after request:', permStatus.receive);
+        }
+  
+        if (permStatus.receive !== 'granted') {
+          console.error('Permission not granted. Status:', permStatus.receive);
+          toast({
+            variant: 'destructive',
+            title: 'Permiso Requerido',
+            description: 'No se pueden programar recordatorios sin permiso para notificaciones.',
+          });
+          return; // Stop execution if permission is denied
+        }
+        console.log('Permissions are granted.');
+      }
+  
+      // Update Firestore with the new reminder time
+      await updateDoc(habitDocRef, { reminderTime: time });
+  
+      // Cancel any previously scheduled notifications for this habit
+      await PushNotifications.cancel({ notifications: [{ id: habit.id }] }).catch(e => console.warn("Could not cancel notifications.", e));
+      console.log(`Cancelled any existing notifications for habit ID: ${habit.id}`);
+  
+      if (time) {
+        const [hour, minute] = time.split(':').map(Number);
+  
+        await PushNotifications.createChannel({
+          id: 'habit_reminders',
+          name: 'Recordatorios de Hábitos',
+          importance: 4,
+          visibility: 1,
+        });
+        
+        console.log(`Scheduling notification for habit "${habit.name}" at ${time}`);
+        await PushNotifications.schedule({
+          notifications: [{
+            id: habit.id,
+            channelId: 'habit_reminders',
+            title: 'Recordatorio de Hábito',
+            body: `Es hora de tu hábito: "${habit.name}"`,
+            schedule: { on: { hour, minute }, repeats: true },
+            smallIcon: 'ic_stat_icon_name',
+            largeIcon: 'ic_launcher',
+            extra: { url: '/dashboard/habits' }
+          }]
+        });
+        console.log('Notification scheduled successfully.');
+  
+        toast({ title: 'Recordatorio Guardado', description: `Recibirás una notificación para "${habit.name}" a las ${time} en tu dispositivo.` });
+      } else {
+        // This case is for when the user is removing a reminder
+        console.log('Reminder time is null, clearing notifications.');
+        toast({ title: 'Recordatorio Eliminado', description: `Ya no se te recordará sobre "${habit.name}".` });
+      }
+    } catch (e: any) {
+      console.error("Full error object in setHabitReminder:", e);
+      const errorMessage = e.message || 'Error desconocido al programar la notificación.';
+      toast({ 
+          variant: 'destructive', 
+          title: 'Error de Notificación', 
+          description: `No se pudo programar el recordatorio. ${errorMessage}` 
+      });
     }
   };
 

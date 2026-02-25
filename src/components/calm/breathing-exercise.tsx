@@ -29,15 +29,17 @@ export function BreathingExercise() {
         {/* Animated Circles */}
         <div
           className={cn(
-            'absolute bg-primary/20 rounded-full transition-all duration-[4000ms] ease-in-out',
+            'absolute bg-primary/20 rounded-full transition-all ease-in-out',
             isBreathingIn ? 'w-48 h-48' : 'w-24 h-24'
           )}
+          style={{ transitionDuration: `${currentPhase.duration}ms` }}
         />
         <div
           className={cn(
-            'absolute bg-primary/50 rounded-full transition-all duration-[4000ms] ease-in-out',
+            'absolute bg-primary/50 rounded-full transition-all ease-in-out',
             isBreathingIn ? 'w-32 h-32' : 'w-16 h-16'
           )}
+          style={{ transitionDuration: `${currentPhase.duration}ms` }}
         />
         <div
           className={cn(

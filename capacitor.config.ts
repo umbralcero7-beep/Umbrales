@@ -3,9 +3,9 @@ import type { CapacitorConfig } from '@capacitor/cli';
 const config: CapacitorConfig = {
   appId: 'com.umbral.app',
   appName: 'Umbral',
-  webDir: 'out',
+  webDir: '.next',
   server: {
-    url: 'https://umbrales-five.vercel.app/', // You will replace this later
+    url: 'https://umbrales-five.vercel.app/',
     cleartext: true,
   },
 };

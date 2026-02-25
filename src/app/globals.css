@@ -40,42 +40,6 @@
     --radius: 0.75rem;
   }
 
-  [data-theme="calma"] {
-    --background: 205 80% 97%; /* Azul muy claro */
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 215 75% 55%; /* Azul profundo */
-    --primary-foreground: 0 0% 98%;
-    --secondary: 215 70% 94%; /* Azul cielo claro */
-    --secondary-foreground: 215 50% 20%;
-    --muted: 215 70% 96%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 250 60% 92%; /* Lavanda suave */
-    --accent-foreground: 250 40% 20%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 215 40% 88%;
-    --input: 215 40% 92%;
-    --ring: 215 75% 55%;
-    --chart-1: 215 75% 55%;
-    --chart-2: 195 70% 55%;
-    --chart-3: 250 60% 92%;
-    --chart-4: 170 50% 85%;
-    --chart-5: 220 70% 60%;
-
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 215 75% 55%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 215 70% 94%;
-    --sidebar-accent-foreground: 215 50% 20%;
-    --sidebar-border: 215 40% 88%;
-    --sidebar-ring: 215 75% 55%;
-  }
-
   [data-theme="cosmos"] {
     --background: 250 20% 12%;
     --foreground: 0 0% 98%;
@@ -148,49 +112,63 @@
     --sidebar-ring: 145 60% 45%;
   }
 
-  [data-theme="atardecer"] {
-    --background: 260 30% 15%;
-    --foreground: 30 40% 95%;
-    --card: 260 25% 20%;
-    --card-foreground: 30 40% 95%;
-    --popover: 260 30% 12%;
-    --popover-foreground: 30 40% 95%;
-    --primary: 25 90% 60%;
-    --primary-foreground: 25 50% 10%;
-    --secondary: 260 25% 25%;
-    --secondary-foreground: 30 40% 95%;
-    --muted: 260 25% 25%;
-    --muted-foreground: 30 20% 70%;
-    --accent: 330 80% 65%;
-    --accent-foreground: 330 50% 10%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 260 25% 25%;
-    --input: 260 25% 30%;
-    --ring: 25 90% 60%;
-    --chart-1: 25 90% 60%;
-    --chart-2: 330 80% 65%;
-    --chart-3: 45 70% 65%;
-    --chart-4: 15 85% 68%;
-    --chart-5: 350 85% 75%;
-    --sidebar-background: 260 30% 18%;
-    --sidebar-foreground: 30 40% 95%;
-    --sidebar-primary: 25 90% 60%;
-    --sidebar-primary-foreground: 25 50% 10%;
-    --sidebar-accent: 260 25% 25%;
-    --sidebar-accent-foreground: 30 40% 95%;
-    --sidebar-border: 260 25% 25%;
-    --sidebar-ring: 25 90% 60%;
-  }
-}
-
-@layer base {
   * {
     @apply border-border;
   }
   body {
     @apply bg-background text-foreground;
   }
+
+  body[data-theme="cosmos"] {
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  body[data-theme="cosmos"]::before,
+  body[data-theme="cosmos"]::after {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    pointer-events: none;
+    background-color: hsl(var(--background));
+  }
+
+  body[data-theme="cosmos"]::before {
+    /* Small stars */
+    background-image: radial-gradient(1px 1px at 10% 20%, white, transparent),
+                      radial-gradient(1px 1px at 80% 30%, white, transparent),
+                      radial-gradient(1px 1px at 50% 70%, white, transparent),
+                      radial-gradient(1px 1px at 30% 50%, white, transparent),
+                      radial-gradient(1px 1px at 90% 85%, white, transparent),
+                      radial-gradient(1px 1px at 5% 5%, white, transparent),
+                      radial-gradient(1px 1px at 60% 15%, white, transparent),
+                      radial-gradient(1px 1px at 25% 90%, white, transparent);
+    animation: twinkle 5s ease-in-out infinite;
+  }
+  
+  body[data-theme="cosmos"]::after {
+    /* Larger stars */
+    background-image: radial-gradient(2px 2px at 40% 50%, white, transparent),
+                      radial-gradient(2px 2px at 90% 10%, white, transparent),
+                      radial-gradient(1.5px 1.5px at 60% 85%, white, transparent),
+                      radial-gradient(1.5px 1.5px at 15% 40%, white, transparent),
+                      radial-gradient(2px 2px at 75% 75%, white, transparent);
+    animation: twinkle 8s ease-in-out infinite reverse;
+  }
+
+  body[data-theme="cosmos"] > * {
+    position: relative;
+    z-index: 1;
+  }
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
 }
 
 @keyframes disintegrate-animation {

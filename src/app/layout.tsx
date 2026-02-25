@@ -7,6 +7,7 @@ import { PushNotificationsProvider } from '@/components/notifications/push-notif
 import { HabitsProvider } from '@/hooks/use-habits';
 import { JournalProvider } from '@/hooks/use-journal';
 import { FirebaseClientProvider } from '@/firebase';
+import { MoodProvider } from '@/hooks/use-mood';
 
 export const metadata: Metadata = {
   title: 'Umbral',
@@ -33,9 +34,11 @@ export default function RootLayout({
           <FirebaseClientProvider>
             <PushNotificationsProvider>
               <HabitsProvider>
-                <JournalProvider>
-                  {children}
-                </JournalProvider>
+                <MoodProvider>
+                  <JournalProvider>
+                    {children}
+                  </JournalProvider>
+                </MoodProvider>
               </HabitsProvider>
             </PushNotificationsProvider>
             <Toaster />

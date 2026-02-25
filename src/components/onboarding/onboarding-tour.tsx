@@ -1,136 +1,128 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Button } from '@/components/ui/button';
-import { Home, BookText, Wind, ListChecks, TrendingUp, Sparkles } from 'lucide-react';
+import Joyride, { Step, CallBackProps, STATUS } from 'react-joyride';
+import { useTheme } from '@/components/theme-provider';
 
-const tourSteps = [
-  {
-    icon: Sparkles,
-    title: '¡Hola de nuevo, {userName}!',
-    description: 'Soy Cero, tu compañero de IA. ¿Te parece si te doy un tour rápido para que veas todo lo que puedes hacer aquí?',
-    nextButtonText: '¡Claro, muéstrame!'
-  },
-  {
-    icon: Home,
-    title: '1. El Inicio, tu centro de mando',
-    description: 'Aquí puedes registrar cómo te sientes cada día y recibir un pequeño mensaje de mi parte. Es nuestro chequeo diario.',
-    nextButtonText: 'Entendido',
-    prevButtonText: 'Volver'
-  },
-  {
-    icon: BookText,
-    title: '2. El Diario, tu espacio personal',
-    description: 'Un lugar privado para tus pensamientos. Escribe libremente y, si quieres, analizaré tus entradas para ayudarte a encontrar claridad.',
-    nextButtonText: 'Suena bien',
-    prevButtonText: 'Atrás'
-  },
-  {
-    icon: Wind,
-    title: '3. Calma, tu refugio',
-    description: 'Cuando necesites un respiro, ven aquí. Encontrarás ejercicios y herramientas para liberar el estrés y encontrar tu centro.',
-    nextButtonText: 'Perfecto',
-    prevButtonText: 'Atrás'
-  },
-  {
-    icon: ListChecks,
-    title: '4. Hábitos, tu camino a la constancia',
-    description: 'Construye la rutina que deseas. Añade hábitos, sigue tu progreso y crea la constancia que te llevará a tus metas.',
-    nextButtonText: '¡Genial!',
-    prevButtonText: 'Atrás'
-  },
-  {
-    icon: TrendingUp,
-    title: '5. Progreso, tu mapa de viaje',
-    description: 'Visualiza tu evolución. Gráficos de tu estado de ánimo y consistencia de hábitos para que veas todo lo que has avanzado.',
-    nextButtonText: 'Casi terminamos',
-    prevButtonText: 'Atrás'
-  },
-  {
-    icon: Sparkles,
-    title: '¡Estás listo para empezar!',
-    description: 'Explora, experimenta y recuerda que cada pequeño paso es un gran avance. Estoy aquí para acompañarte.',
-    nextButtonText: 'Comenzar mi viaje',
-    prevButtonText: 'Volver a ver'
-  }
-];
-
-const TOUR_STORAGE_KEY = 'umbral_tour_completed';
+const TOUR_STORAGE_KEY = 'umbral_tour_completed_v3';
 
 export function OnboardingTour() {
-  const [isOpen, setIsOpen] = useState(false);
-  const [step, setStep] = useState(0);
+  const [runTour, setRunTour] = useState(false);
+  const [isClient, setIsClient] = useState(false);
   const [userName, setUserName] = useState('');
+  const { theme } = useTheme();
+
+  const tourSteps: Step[] = [
+    {
+      target: 'body',
+      content: `¡Bienvenido a Umbral, ${userName}! Soy Cero, tu compañero en este viaje. Permíteme mostrarte cómo funciona cada módulo.`,
+      placement: 'center',
+    },
+    {
+      target: '#mood-selector-container',
+      content: 'Aquí puedes registrar cómo te sientes cada día. Es el primer paso para entender tus emociones y recibir apoyo personalizado.',
+      placement: 'bottom',
+    },
+    {
+      target: '#nav-diario',
+      content: 'En tu Diario puedes escribir tus pensamientos. Cero te ayudará a analizarlos para encontrar patrones y claridad.',
+      placement: 'right',
+    },
+    {
+      target: '#nav-calma',
+      content: 'Este es tu Espacio de Calma. Usa los ejercicios de respiración y liberación para encontrar serenidad cuando lo necesites.',
+      placement: 'right',
+    },
+    {
+      target: '#nav-hábitos',
+      content: 'Aquí puedes crear y dar seguimiento a los hábitos que te ayudarán a construir una rutina positiva.',
+      placement: 'right',
+    },
+    {
+      target: '#nav-progreso',
+      content: 'Visualiza tus patrones de ánimo, la consistencia de tus hábitos y los logros que has desbloqueado en tu viaje.',
+      placement: 'right',
+    },
+     {
+      target: '#nav-ajustes',
+      content: 'Finalmente, aquí puedes personalizar la apariencia de la aplicación y gestionar la configuración de tu cuenta.',
+      placement: 'right',
+    },
+    {
+      target: 'body',
+      content: '¡Eso es todo por ahora! Explora a tu ritmo. Estoy aquí para ayudarte a construir tu propio camino.',
+      placement: 'center',
+    },
+  ];
 
   useEffect(() => {
+    setIsClient(true);
     const hasSeenTour = localStorage.getItem(TOUR_STORAGE_KEY);
     const name = localStorage.getItem('userName');
-    if (name) setUserName(name);
-
-    // To prevent hydration errors, we ensure this only runs on the client
-    // after the initial render has completed.
-    if (typeof window !== "undefined" && !hasSeenTour) {
-      setIsOpen(true);
+    
+    if (name) {
+      setUserName(name);
+    }
+    
+    // Use a timeout to ensure the DOM is ready, especially for the sidebar nav
+    if (typeof window !== 'undefined' && !hasSeenTour) {
+      setTimeout(() => {
+        setRunTour(true);
+      }, 1500); 
     }
   }, []);
 
-  const handleNext = () => {
-    if (step < tourSteps.length - 1) {
-      setStep(prev => prev + 1);
-    } else {
-      handleClose();
+  const handleJoyrideCallback = (data: CallBackProps) => {
+    const { status } = data;
+    const finishedStatuses: string[] = [STATUS.FINISHED, STATUS.SKIPPED];
+
+    if (finishedStatuses.includes(status)) {
+      localStorage.setItem(TOUR_STORAGE_KEY, 'true');
+      setRunTour(false);
     }
   };
-
-  const handlePrev = () => {
-    if (step > 0) {
-      setStep(prev => prev - 1);
-    }
-  };
-
-  const handleClose = () => {
-    setIsOpen(false);
-    localStorage.setItem(TOUR_STORAGE_KEY, 'true');
-  };
-
-  if(!isOpen) return null;
-
-  const currentStep = tourSteps[step];
-  const Icon = currentStep.icon;
+  
+  if (!isClient) {
+    return null;
+  }
 
   return (
-    <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
-      <AlertDialogContent className="sm:max-w-md">
-        <AlertDialogHeader className="text-center items-center">
-          <div className="mb-4 bg-primary/10 p-3 rounded-full w-fit">
-            <Icon className="h-8 w-8 text-primary" />
-          </div>
-          <AlertDialogTitle className="font-headline text-xl">
-            {currentStep.title.replace('{userName}', userName)}
-          </AlertDialogTitle>
-          <AlertDialogDescription className="min-h-[60px]">
-            {currentStep.description}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter className="flex-row justify-between w-full pt-4">
-          {step > 0 ? (
-            <Button variant="ghost" onClick={handlePrev}>
-                {currentStep.prevButtonText || 'Anterior'}
-            </Button>
-          ) : <div />}
-          <Button onClick={handleNext}>
-            {currentStep.nextButtonText || 'Siguiente'}
-          </Button>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <Joyride
+      run={runTour}
+      steps={tourSteps}
+      callback={handleJoyrideCallback}
+      continuous
+      showProgress
+      showSkipButton
+      locale={{
+          back: 'Atrás',
+          close: 'Cerrar',
+          last: 'Terminar',
+          next: 'Siguiente',
+          skip: 'Omitir',
+      }}
+      styles={{
+        options: {
+          arrowColor: theme === 'cosmos' || theme === 'bosque' || theme === 'atardecer' ? '#2d283d' : '#ffffff',
+          backgroundColor: theme === 'cosmos' || theme === 'bosque' || theme === 'atardecer' ? '#2d283d' : '#ffffff',
+          primaryColor: 'hsl(var(--primary))',
+          textColor: theme === 'cosmos' || theme === 'bosque' || theme === 'atardecer' ? '#f8fafc' : '#020617',
+          zIndex: 1000,
+        },
+        tooltip: {
+            borderRadius: 'var(--radius)',
+        },
+        buttonNext: {
+            borderRadius: 'var(--radius)',
+            backgroundColor: 'hsl(var(--primary))',
+        },
+        buttonBack: {
+            color: 'hsl(var(--primary))'
+        },
+        buttonSkip: {
+            color: 'hsl(var(--muted-foreground))'
+        }
+      }}
+    />
   );
 }

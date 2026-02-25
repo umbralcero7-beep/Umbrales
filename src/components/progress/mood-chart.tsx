@@ -3,28 +3,12 @@
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts"
 
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart"
-import { moodData } from "@/lib/data"
-
-const chartData = [
-  { mood: "Feliz", count: moodData.filter(d => d.mood === "Feliz").length, fill: "var(--color-happy)" },
-  { mood: "Calmado", count: moodData.filter(d => d.mood === "Calmado").length, fill: "var(--color-calm)" },
-  { mood: "Pensativo", count: moodData.filter(d => d.mood === "Pensativo").length, fill: "var(--color-thoughtful)" },
-  { mood: "Triste", count: moodData.filter(d => d.mood === "Triste").length, fill: "var(--color-sad)" },
-  { mood: "Ansioso", count: moodData.filter(d => d.mood === "Ansioso").length, fill: "var(--color-anxious)" },
-  { mood: "Cansado", count: moodData.filter(d => d.mood === "Cansado").length, fill: "var(--color-tired)" },
-]
+import { useMood } from "@/hooks/use-mood"
 
 const chartConfig = {
   count: {
@@ -57,6 +41,18 @@ const chartConfig = {
 } satisfies ChartConfig
 
 export function MoodChart() {
+  const { moods: moodLogs } = useMood();
+
+  const chartData = [
+    { mood: "Feliz", count: moodLogs.filter(d => d.mood === "Feliz").length, fill: "var(--color-happy)" },
+    { mood: "Calmado", count: moodLogs.filter(d => d.mood === "Calmado").length, fill: "var(--color-calm)" },
+    { mood: "Pensativo", count: moodLogs.filter(d => d.mood === "Pensativo").length, fill: "var(--color-thoughtful)" },
+    { mood: "Triste", count: moodLogs.filter(d => d.mood === "Triste").length, fill: "var(--color-sad)" },
+    { mood: "Ansioso", count: moodLogs.filter(d => d.mood === "Ansioso").length, fill: "var(--color-anxious)" },
+    { mood: "Cansado", count: moodLogs.filter(d => d.mood === "Cansado").length, fill: "var(--color-tired)" },
+  ]
+  const maxCount = Math.max(...chartData.map(d => d.count), 1);
+
   return (
     <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
       <BarChart accessibilityLayer data={chartData}>
@@ -72,6 +68,7 @@ export function MoodChart() {
             axisLine={false}
             tickMargin={10}
             allowDecimals={false}
+            domain={[0, maxCount > 4 ? maxCount : 5]}
         />
         <ChartTooltip
           cursor={false}

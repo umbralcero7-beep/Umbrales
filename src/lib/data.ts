@@ -160,16 +160,6 @@ export type JournalEntry = {
     analysis: AnalyzeJournalEntryOutput;
 };
 
-export const moodData: { date: string; mood: string }[] = [
-    { date: 'Hace 6 días', mood: 'Feliz' },
-    { date: 'Hace 5 días', mood: 'Calmado' },
-    { date: 'Hace 4 días', mood: 'Ansioso' },
-    { date: 'Hace 3 días', mood: 'Triste' },
-    { date: 'Hace 2 días', mood: 'Cansado' },
-    { date: 'Ayer', mood: 'Calmado' },
-    { date: 'Hoy', mood: 'Pensativo' },
-];
-
 export const achievements = [
     { id: '1', name: 'Primera Entrada de Diario', unlocked: true, icon: 'Feather', description: 'Escribe tu primera reflexión en el diario.' },
     { id: '2', name: 'Racha de 7 Días', unlocked: false, icon: 'Flame', description: 'Completa al menos un hábito durante 7 días seguidos.' },

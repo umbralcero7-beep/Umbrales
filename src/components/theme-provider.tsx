@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react'
 
-type Theme = "zen" | "calma" | "cosmos" | "bosque" | "atardecer";
+type Theme = "zen" | "cosmos" | "bosque";
 
 type ThemeProviderProps = {
   children: React.ReactNode

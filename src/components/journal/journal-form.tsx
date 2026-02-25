@@ -23,10 +23,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Lightbulb, Loader2, ListTree, Smile, Sparkles, Star } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
+import { Loader2 } from "lucide-react";
 import { useJournal } from "@/hooks/use-journal";
+import { JournalAnalysis } from "./journal-analysis";
 
 const formSchema = z.object({
   entry: z.string().min(50, "Tu entrada debe tener al menos 50 caracteres para ser analizada."),
@@ -65,8 +64,8 @@ export function JournalForm() {
         entryText: values.entry,
         userName: userName || 'tú'
       });
-      setAnalysis(result);
       addJournalEntry(values.entry, result);
+      setAnalysis(result);
       form.reset();
     } catch (error) {
       console.error("Error en el análisis del diario:", error);
@@ -121,7 +120,7 @@ export function JournalForm() {
               </div>
               <Button type="submit" disabled={isLoading}>
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Analizar Entrada
+                Guardar y Analizar
               </Button>
             </form>
           </Form>
@@ -145,42 +144,11 @@ export function JournalForm() {
       {analysis && (
         <Card>
           <CardHeader>
-            <CardTitle className="font-headline">Análisis de Cero</CardTitle>
-            <CardDescription>Esto es lo que Cero encontró en tu entrada.</CardDescription>
+            <CardTitle className="font-headline">Análisis de tu Entrada Reciente</CardTitle>
+            <CardDescription>Esto es lo que Cero encontró en tu última reflexión.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <div>
-              <h3 className="flex items-center text-lg font-semibold mb-2"><Smile className="mr-2 h-5 w-5 text-primary" /> Sentimiento General</h3>
-              <Badge variant="outline">{analysis.sentiment}</Badge>
-            </div>
-            <Separator />
-            <div>
-              <h3 className="flex items-center text-lg font-semibold mb-2"><Lightbulb className="mr-2 h-5 w-5 text-primary" /> Temas Clave</h3>
-              <div className="flex flex-wrap gap-2">
-                {analysis.topics.map((topic) => (
-                  <Badge key={topic} variant="secondary">{topic}</Badge>
-                ))}
-              </div>
-            </div>
-            <Separator />
-             <div>
-              <h3 className="flex items-center text-lg font-semibold mb-2"><ListTree className="mr-2 h-5 w-5 text-primary" /> Patrones Potenciales</h3>
-              <ul className="list-disc list-inside text-muted-foreground space-y-1">
-                {analysis.patterns.map((pattern, index) => (
-                    <li key={index}>{pattern}</li>
-                ))}
-              </ul>
-            </div>
-            <Separator />
-            <div>
-                <h3 className="flex items-center text-lg font-semibold mb-2"><Star className="mr-2 h-5 w-5 text-primary" /> Resumen</h3>
-                <p className="text-muted-foreground">{analysis.summary}</p>
-            </div>
-            <Separator />
-            <div>
-              <h3 className="flex items-center text-lg font-semibold mb-2"><Sparkles className="mr-2 h-5 w-5 text-primary" /> Sugerencia de Cero</h3>
-              <p className="text-muted-foreground">{analysis.suggestedAction}</p>
-            </div>
+          <CardContent>
+            <JournalAnalysis analysis={analysis} />
           </CardContent>
         </Card>
       )}

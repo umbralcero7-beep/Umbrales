@@ -10,15 +10,15 @@ import {
 import { Home, BookText, ListChecks, TrendingUp, Rocket, Settings, Wind } from "lucide-react";
 
 const navItems = [
-  { href: "/dashboard", label: "Inicio", icon: Home },
-  { href: "/dashboard/journal", label: "Diario", icon: BookText },
-  { href: "/dashboard/calm", label: "Calma", icon: Wind },
-  { href: "/dashboard/habits", label: "Hábitos", icon: ListChecks },
-  { href: "/dashboard/progress", label: "Progreso", icon: TrendingUp },
+  { id: "inicio", href: "/dashboard", label: "Inicio", icon: Home },
+  { id: "diario", href: "/dashboard/journal", label: "Diario", icon: BookText },
+  { id: "calma", href: "/dashboard/calm", label: "Calma", icon: Wind },
+  { id: "hábitos", href: "/dashboard/habits", label: "Hábitos", icon: ListChecks },
+  { id: "progreso", href: "/dashboard/progress", label: "Progreso", icon: TrendingUp },
 ];
 
 const bottomNavItems = [
-    { href: "/dashboard/settings", label: "Ajustes", icon: Settings },
+    { id: "ajustes", href: "/dashboard/settings", label: "Ajustes", icon: Settings },
 ]
 
 export function MainNav() {
@@ -31,6 +31,7 @@ export function MainNav() {
             <SidebarMenuItem key={item.href}>
             <SidebarMenuButton
                 asChild
+                id={`nav-${item.id}`}
                 isActive={pathname === item.href}
                 tooltip={item.label}
             >
@@ -47,6 +48,7 @@ export function MainNav() {
             <SidebarMenuItem key={item.href}>
             <SidebarMenuButton
                 asChild
+                id={`nav-${item.id}`}
                 isActive={pathname === item.href}
                 tooltip={item.label}
                 className={item.href === '/dashboard/pro' ? 'text-primary hover:bg-primary/10 data-[active=true]:bg-primary/10 data-[active=true]:text-primary' : ''}
