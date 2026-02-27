@@ -78,7 +78,7 @@ export function MoodSelector() {
   const [step, setStep] = useState<'write' | 'advice'>('write');
   const [journalText, setJournalText] = useState('');
   const { toast } = useToast();
-  const { addMoodLog } = useMood();
+  const { addMoodLog, setTodaysInsight } = useMood();
   const { addJournalEntry } = useJournal();
   
   const [selectedBookTitle, setSelectedBookTitle] = useState<string | null>(null);
@@ -118,12 +118,8 @@ export function MoodSelector() {
     try {
       const result = await getAdviceForMood({ mood: selectedMood });
       setAdvice(result);
+      setTodaysInsight(result);
       setSelectedBookTitle(result.bookTitle);
-
-       toast({
-        title: "¡Estado de ánimo registrado!",
-        description: `Has registrado tu estado de ánimo como: ${selectedMood}`,
-      })
     } catch (error: any) {
         let userMessage = "No se pudo obtener un consejo en este momento. Por favor, inténtalo de nuevo.";
         if (error?.message?.includes('429')) {

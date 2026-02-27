@@ -4,19 +4,29 @@ import { MoodSelector } from "@/components/dashboard/mood-selector";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import { Library, Wind } from "lucide-react";
+import { useMood } from "@/hooks/use-mood";
+import { TodaysInsight } from "@/components/dashboard/todays-insight";
 
 
 export default function DashboardPage() {
+  const { moods, todaysInsight } = useMood();
+  const today = new Date().toISOString().split('T')[0];
+  const moodLoggedToday = moods.some(mood => mood.date === today);
+
   return (
     <div className="flex flex-col items-center justify-start text-center gap-12 py-8 md:py-12 px-4">
         
-        <div id="mood-selector-container" className="w-full max-w-md space-y-8">
-            <div className="max-w-md mx-auto">
-                <h1 className="text-3xl font-bold font-headline">¿Cómo te sientes hoy?</h1>
-                <p className="text-muted-foreground mt-2">Tu selección nos ayudará a darte un mejor acompañamiento.</p>
+        {moodLoggedToday && todaysInsight ? (
+            <TodaysInsight insight={todaysInsight} />
+        ) : (
+            <div id="mood-selector-container" className="w-full max-w-md space-y-8">
+                <div className="max-w-md mx-auto">
+                    <h1 className="text-3xl font-bold font-headline">¿Cómo te sientes hoy?</h1>
+                    <p className="text-muted-foreground mt-2">Tu selección nos ayudará a darte un mejor acompañamiento.</p>
+                </div>
+                <MoodSelector />
             </div>
-            <MoodSelector />
-        </div>
+        )}
 
         <div id="explore-section" className="w-full max-w-2xl space-y-6">
           <h2 className="text-2xl font-bold font-headline">Explorar</h2>
