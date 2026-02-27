@@ -1,21 +1,14 @@
 'use client';
 
-import dynamic from 'next/dynamic';
 import { MoodSelector } from "@/components/dashboard/mood-selector";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import { Library, Wind } from "lucide-react";
 
-const OnboardingTour = dynamic(
-  () => import('@/components/onboarding/onboarding-tour').then(mod => mod.OnboardingTour),
-  { ssr: false }
-);
-
 
 export default function DashboardPage() {
   return (
     <div className="flex flex-col items-center justify-start text-center gap-12 py-8 md:py-12 px-4">
-        <OnboardingTour />
         
         <div id="mood-selector-container" className="w-full max-w-md space-y-8">
             <div className="max-w-md mx-auto">
